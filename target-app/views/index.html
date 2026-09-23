@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinel QC Demo — Live Leaderboard & Match Stats</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --primary: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .banner {
+            width: 100%;
+            max-width: 680px;
+            background: linear-gradient(135deg, #1e1b4b, #312e81);
+            border: 1px solid #4338ca;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .banner-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #818cf8;
+            margin-bottom: 6px;
+        }
+
+        .banner-sub {
+            font-size: 13px;
+            color: #c7d2fe;
+            margin-bottom: 8px;
+        }
+
+        .banner-note {
+            font-size: 12px;
+            color: #a5b4fc;
+        }
+
+        .banner-note a {
+            color: #38bdf8;
+            text-decoration: underline;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 680px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-top: 0;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            margin-top: 0;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        .drift-selector-box {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .drift-selector-box label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #38bdf8;
+            margin-bottom: 8px;
+        }
+
+        select.drift-select {
+            width: 100%;
+            padding: 10px;
+            background: #1e293b;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        select.drift-select:focus {
+            border-color: var(--primary);
+        }
+
+        .drift-description {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #cbd5e1;
+            font-style: italic;
+            line-height: 1.4;
+        }
+
+        .drift-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #334155;
+            color: #38bdf8;
+            margin-bottom: 20px;
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background: #0f172a;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .leaderboard-table th, .leaderboard-table td {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .leaderboard-table th {
+            background: #1e293b;
+            color: #38bdf8;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .leaderboard-table td {
+            border-bottom: 1px solid #1e293b;
+        }
+
+        .badge-online {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .badge-inmatch {
+            color: var(--warning);
+            font-weight: 600;
+        }
+
+        .badge-offline {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .action-btn:hover {
+            opacity: 0.9;
+        }
+
+        .results-section {
+            margin-top: 28px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            display: none;
+        }
+
+        .score-box {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .score-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        .export-btn {
+            background: var(--success);
+        }
+
+        .error-msg {
+            color: var(--danger);
+            margin-top: 12px;
+            font-size: 14px;
+            display: none;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            padding: 10px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="banner">
+        <div class="banner-title">Sentinel QC Demo — Live Leaderboard & Match Stats</div>
+        <div class="banner-sub">Drift-simulation live-service game dashboard for Sentinel self-healing test automation agent.</div>
+        <div class="banner-note">
+            <a href="/dashboard.html" style="color: #38bdf8; font-weight: 700; text-decoration: underline;">🎛️ Open Demo Dashboard</a> | 
+            <a href="https://github.com/alphaoct26/Sentinel-Self-Healing-AI-Test-Automation-Agent-for-Live-Ops-QC-Workflows" target="_blank">GitHub Repository</a> | 
+            <a href="https://youtube.com/watch?v=demo-placeholder" target="_blank">Demo Video</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>Live Leaderboard &amp; Match Stats</h1>
+        <p class="subtitle">Real-time competitive match rankings &amp; live-service player metrics</p>
+
+        <div class="drift-selector-box">
+            <label for="drift-selector">Simulated UI Drift Mode:</label>
+            <select id="drift-selector" class="drift-select">
+                <option value="NORMAL">Normal Mode (Stable UI & API)</option>
+                <option value="SELECTOR_DRIFT">Selector Drift (Renamed Button ID)</option>
+                <option value="ASSERTION_DRIFT">Assertion Drift (Changed Copy Wording)</option>
+                <option value="REAL_BUG">Real Bug (HTTP 500 Endpoint Error)</option>
+            </select>
+            <div class="drift-description" id="drift-desc"></div>
+        </div>
+
+        <div class="drift-badge" id="drift-mode-indicator">Mode: {{DRIFT_MODE}}</div>
+
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Player Name</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>#1</td><td>Viper_QC</td><td>14,250</td><td><span class="badge-online">Online</span></td></tr>
+                <tr><td>#2</td><td>Ghost_Agent</td><td>12,890</td><td><span class="badge-online">Online</span></td></tr>
+                <tr><td>#3</td><td>Shadow_Ninja</td><td>11,400</td><td><span class="badge-inmatch">In-Match</span></td></tr>
+                <tr><td>#4</td><td>Apex_Predator</td><td>9,750</td><td><span class="badge-online">Online</span></td></tr>
+                <tr><td>#5</td><td>Sentinel_Bot</td><td>8,620</td><td><span class="badge-offline">Offline</span></td></tr>
+            </tbody>
+        </table>
+
+        <button id="{{REFRESH_BTN_ID}}" class="action-btn">Refresh Leaderboard</button>
+
+        <div class="results-section" id="results-section">
+            <div class="score-box">
+                <div class="score-value" id="rank-badge">{{RANK_BADGE_TEXT}}</div>
+            </div>
+
+            <button id="export-btn" class="action-btn export-btn">Export Match Report</button>
+            <div class="error-msg" id="error-display"></div>
+        </div>
+    </div>
+
+    <script>
+        const driftDescriptions = {
+            "NORMAL": "Simulates stable UI locators (#refresh-btn), tier labels, and backend responses.",
+            "SELECTOR_DRIFT": "Renames Refresh button ID from #refresh-btn to #reload-leaderboard-btn (simulates UI redesign).",
+            "ASSERTION_DRIFT": "Changes rank badge label from 'Top Rank: Elite' to 'Current Tier: Elite' (simulates copy update).",
+            "REAL_BUG": "Causes the match report export API endpoint (/api/export-pdf) to return HTTP 500 error."
+        };
+
+        const driftSelector = document.getElementById("drift-selector");
+        const driftDesc = document.getElementById("drift-desc");
+        const driftBadge = document.getElementById("drift-mode-indicator");
+        const resultsSec = document.getElementById("results-section");
+        const exportBtn = document.getElementById("export-btn");
+        const errorDisplay = document.getElementById("error-display");
+
+        function updateUIDriftState(mode) {
+            driftSelector.value = mode;
+            driftBadge.textContent = "Mode: " + mode;
+            driftDesc.textContent = driftDescriptions[mode] || "";
+
+            const refreshBtn = document.querySelector(".action-btn:not(.export-btn)");
+            if (refreshBtn) {
+                if (mode === "SELECTOR_DRIFT") {
+                    refreshBtn.id = "reload-leaderboard-btn";
+                } else {
+                    refreshBtn.id = "refresh-btn";
+                }
+            }
+
+            const rankBadgeEl = document.getElementById("rank-badge");
+            if (rankBadgeEl) {
+                if (mode === "ASSERTION_DRIFT") {
+                    rankBadgeEl.textContent = "Current Tier: Elite";
+                } else {
+                    rankBadgeEl.textContent = "Top Rank: Elite";
+                }
+            }
+        }
+
+        const initialMode = "{{DRIFT_MODE}}".includes("{{") ? "NORMAL" : "{{DRIFT_MODE}}";
+        updateUIDriftState(initialMode);
+
+        driftSelector.addEventListener("change", async (e) => {
+            const selectedMode = e.target.value;
+            updateUIDriftState(selectedMode);
+            try {
+                await fetch("/api/drift-mode", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ mode: selectedMode })
+                });
+                await fetch("/api/drift", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ mode: selectedMode })
+                });
+            } catch (err) {
+                console.log("Drift mode API update:", err.message);
+            }
+        });
+
+        document.addEventListener("click", (e) => {
+            if (e.target.id === "refresh-btn" || e.target.id === "reload-leaderboard-btn") {
+                resultsSec.style.display = "block";
+            }
+        });
+
+        if (exportBtn) {
+            exportBtn.addEventListener("click", async () => {
+                errorDisplay.style.display = "none";
+                try {
+                    const res = await fetch("/api/export-pdf", { method: "POST" });
+                    if (!res.ok) {
+                        const errData = await res.json();
+                        throw new Error(errData.error || "HTTP " + res.status);
+                    }
+                    const data = await res.json();
+                    alert("Export successful: " + data.pdf_url);
+                } catch (err) {
+                    errorDisplay.textContent = "Error exporting report: " + err.message;
+                    errorDisplay.style.display = "block";
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: sentinel-target-app
+    env: node
+    rootDir: target-app
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DRIFT_MODE
+        value: NORMAL

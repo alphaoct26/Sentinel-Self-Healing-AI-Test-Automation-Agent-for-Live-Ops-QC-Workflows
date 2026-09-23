@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinel QC — Single-Page Decoy & AI Self-Healing Demo</title>
+    <style>
+        :root {
+            --bg: #090d16;
+            --panel-bg: #131b2e;
+            --border: #1e293b;
+            --primary: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --cyan: #06b6d4;
+            --purple: #8b5cf6;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --mono: 'JetBrains Mono', Consolas, monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 24px;
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e1b4b, #0f172a);
+            border: 1px solid #312e81;
+            padding: 16px 20px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 { font-size: 18px; font-weight: 700; color: #fff; }
+        header p { font-size: 12px; color: #a5b4fc; margin-top: 2px; }
+
+        .nav-links a {
+            color: #38bdf8;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            margin-left: 12px;
+        }
+        .nav-links a:hover { text-decoration: underline; }
+
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--cyan);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Target App Visual Box */
+        .target-box {
+            background: #0f172a;
+            border: 1px dashed #334155;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .target-btn {
+            padding: 12px 24px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .target-badge {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .target-export-btn {
+            padding: 8px 16px;
+            background: #334155;
+            color: #e2e8f0;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Inline Break Controls */
+        .break-controls {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .btn-break {
+            padding: 10px;
+            border: 1px solid var(--border);
+            background: #0f172a;
+            color: var(--text);
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .btn-break:hover { border-color: var(--primary); background: #1e293b; }
+        .btn-break.active { border-color: var(--cyan); background: rgba(6, 182, 212, 0.15); }
+
+        /* Action Controls */
+        .execution-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn-action {
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: white;
+            transition: opacity 0.2s;
+        }
+
+        .btn-run { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+        .btn-heal { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+        .btn-action:hover:not(:disabled) { opacity: 0.9; }
+        .btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Result & Status Boxes */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .status-pass { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
+        .status-fail { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+        .status-amber { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+
+        .code-box {
+            background: #090d16;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            font-family: var(--mono);
+            font-size: 12px;
+            line-height: 1.5;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .diff-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-family: var(--mono);
+            font-size: 11px;
+        }
+
+        .diff-old { background: #090d16; border: 1px solid rgba(239,68,68,0.4); padding: 8px; color: #fca5a5; border-radius: 4px; }
+        .diff-new { background: #090d16; border: 1px solid rgba(16,185,129,0.4); padding: 8px; color: #6ee7b7; border-radius: 4px; }
+
+        /* Audit Log Table */
+        table.audit-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        table.audit-table th, table.audit-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        table.audit-table th {
+            background: #0f172a;
+            color: var(--text-muted);
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .spinner {
+            width: 14px; height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div>
+            <h1>🛡️ Sentinel QC — Single-Page AI Self-Healing Decoy</h1>
+            <p>Interactive single-page demo: break elements, run tests, auto-heal drift, and inspect visual audit logs</p>
+        </div>
+        <div class="nav-links">
+            <a href="/dashboard.html">🎛️ Full Dashboard</a>
+            <a href="/">🌐 Target App</a>
+        </div>
+    </header>
+
+    <!-- Card 1: Target App UI & Break Controls -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">1. Target Application Element & Inline "Break It" Controls</div>
+            <span id="drift-status-badge" class="status-badge status-pass">Mode: NORMAL</span>
+        </div>
+
+        <!-- Target App UI Box -->
+        <div class="target-box">
+            <button id="refresh-btn" class="target-btn">Refresh Leaderboard</button>
+            <div id="rank-badge" class="target-badge">Top Rank: Elite</div>
+            <button id="export-btn" class="target-export-btn">Export Match Report</button>
+            <div id="error-display" style="display:none; color:var(--danger); font-size:12px; font-weight:600;"></div>
+        </div>
+
+        <!-- Break Controls -->
+        <div>
+            <div style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase;">Click to Simulate UI Drift:</div>
+            <div class="break-controls">
+                <button class="btn-break active" id="btn-break-normal" onclick="applyDrift('NORMAL')">🟢 Reset Baseline</button>
+                <button class="btn-break" id="btn-break-selector" onclick="applyDrift('SELECTOR_DRIFT')">🔵 Rename Button</button>
+                <button class="btn-break" id="btn-break-assertion" onclick="applyDrift('ASSERTION_DRIFT')">🟡 Change Label</button>
+                <button class="btn-break" id="btn-break-bug" onclick="applyDrift('REAL_BUG')">🔴 Break Export</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: Run Test & AI Heal Actions -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">2. Execution Controls (Run Test & AI Heal Agent)</div>
+        </div>
+
+        <div class="execution-row">
+            <button class="btn-action btn-run" id="btn-run-tests" onclick="executeTest()">
+                🚀 Run Test Suite
+            </button>
+            <button class="btn-action btn-heal" id="btn-heal-agent" onclick="executeHeal()">
+                🤖 Run AI Heal Agent
+            </button>
+        </div>
+
+        <!-- Test Run Result Box -->
+        <div id="test-result-box" style="display:none;" class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:13px; font-weight:700;">Test Suite Execution Result:</span>
+                <span id="test-pass-fail-badge" class="status-badge status-pass">PASSED</span>
+            </div>
+            <div id="test-error-details" class="code-box" style="display:none; color:#fca5a5; border-color:rgba(239,68,68,0.4);"></div>
+        </div>
+
+        <!-- AI Heal Result Card -->
+        <div id="heal-result-card" style="display:none;" class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span id="heal-class-badge" class="status-badge status-pass">SELECTOR_DRIFT</span>
+                <span id="heal-action-badge" class="status-badge status-pass">Test Patched ✓</span>
+            </div>
+
+            <div style="font-size:12px; font-weight:600; display:flex; justify-content:space-between;">
+                <span>AI Confidence Score:</span>
+                <span id="heal-conf-badge" style="color:var(--cyan); font-weight:700;">92%</span>
+            </div>
+
+            <div id="heal-rationale-text" class="code-box"></div>
+
+            <div id="heal-diff-box" class="diff-grid" style="display:none;">
+                <div class="diff-old" id="diff-old-val">- #refresh-btn</div>
+                <div class="diff-new" id="diff-new-val">+ #reload-leaderboard-btn</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: In-Memory / Server Audit Log Table -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">3. Visual Audit Log & Repair History</div>
+        </div>
+        <table class="audit-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Drift Mode</th>
+                    <th>AI Classification</th>
+                    <th>Confidence</th>
+                    <th>Action Taken</th>
+                </tr>
+            </thead>
+            <tbody id="audit-log-body">
+                <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No repair logs recorded yet. Run AI Heal to generate an audit log.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let localAuditLogs = [];
+        let currentDriftMode = "NORMAL";
+
+        async function applyDrift(mode) {
+            currentDriftMode = mode;
+            document.querySelectorAll(".btn-break").forEach(b => b.classList.remove("active"));
+            
+            const modeKey = mode.split("_")[0].toLowerCase();
+            const btn = document.getElementById("btn-break-" + modeKey);
+            if (btn) btn.classList.add("active");
+
+            document.getElementById("drift-status-badge").textContent = "Mode: " + mode;
+
+            // Direct JS DOM mutation for instant visual feedback on screen
+            const refreshBtn = document.getElementById("refresh-btn") || document.getElementById("reload-leaderboard-btn");
+            const rankBadge = document.getElementById("rank-badge");
+
+            if (mode === "SELECTOR_DRIFT") {
+                if (refreshBtn) refreshBtn.id = "reload-leaderboard-btn";
+            } else {
+                if (refreshBtn) refreshBtn.id = "refresh-btn";
+            }
+
+            if (mode === "ASSERTION_DRIFT") {
+                if (rankBadge) rankBadge.textContent = "Current Tier: Elite";
+            } else {
+                if (rankBadge) rankBadge.textContent = "Top Rank: Elite";
+            }
+
+            // Sync with backend server
+            try {
+                await fetch("/api/drift-mode", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ mode: mode })
+                });
+            } catch (err) {}
+        }
+
+        async function executeTest() {
+            const btn = document.getElementById("btn-run-tests");
+            const resultBox = document.getElementById("test-result-box");
+            const badge = document.getElementById("test-pass-fail-badge");
+            const errDetails = document.getElementById("test-error-details");
+
+            btn.disabled = true;
+            btn.innerHTML = `<div class="spinner"></div> Running Test Suite...`;
+
+            try {
+                const res = await fetch("/api/run-test", { method: "POST" });
+                const data = await res.json();
+
+                resultBox.style.display = "flex";
+                if (data.status === "PASSED") {
+                    badge.className = "status-badge status-pass";
+                    badge.textContent = "PASSED ✓";
+                    errDetails.style.display = "none";
+                } else {
+                    badge.className = "status-badge status-fail";
+                    badge.textContent = "FAILED ✗";
+                    errDetails.style.display = "block";
+                    errDetails.textContent = data.error_summary || "Element #refresh-btn not found (Timeout 5000ms).";
+                }
+            } catch (err) {
+                resultBox.style.display = "flex";
+                badge.className = "status-badge status-fail";
+                badge.textContent = "FAILED ✗";
+                errDetails.style.display = "block";
+                errDetails.textContent = err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `🚀 Run Test Suite`;
+            }
+        }
+
+        async function executeHeal() {
+            const btn = document.getElementById("btn-heal-agent");
+            const resultCard = document.getElementById("heal-result-card");
+            const classBadge = document.getElementById("heal-class-badge");
+            const actionBadge = document.getElementById("heal-action-badge");
+            const confBadge = document.getElementById("heal-conf-badge");
+            const rationaleText = document.getElementById("heal-rationale-text");
+            const diffBox = document.getElementById("heal-diff-box");
+
+            btn.disabled = true;
+            btn.innerHTML = `<div class="spinner"></div> Analyzing DOM & Diagnosing...`;
+
+            try {
+                const res = await fetch("/api/heal", { method: "POST" });
+                const data = await res.json();
+
+                resultCard.style.display = "flex";
+                const classification = data.classification || "UNKNOWN";
+                const confidence = Math.round((data.confidence || 0) * 100);
+                const verification = data.verification_result || "HUMAN_REVIEW_REQUIRED";
+
+                classBadge.textContent = classification;
+                confBadge.textContent = confidence + "%";
+
+                if (verification === "PASSED") {
+                    actionBadge.className = "status-badge status-pass";
+                    actionBadge.textContent = "Test Patched ✓";
+                } else {
+                    actionBadge.className = "status-badge status-amber";
+                    actionBadge.textContent = "Flagged for Human Review";
+                }
+
+                rationaleText.textContent = data.rationale || "Diagnostic analysis complete.";
+
+                if (data.diff && data.diff.includes("-")) {
+                    diffBox.style.display = "grid";
+                    document.getElementById("diff-old-val").textContent = data.diff.split("\n").find(l => l.startsWith("-")) || "- Old Locator";
+                    document.getElementById("diff-new-val").textContent = data.diff.split("\n").find(l => l.startsWith("+")) || "+ New Locator";
+                } else {
+                    diffBox.style.display = "none";
+                }
+
+                // Add to audit table
+                const logEntry = {
+                    time: new Date().toLocaleTimeString(),
+                    mode: currentDriftMode,
+                    classification: classification,
+                    confidence: confidence + "%",
+                    action: verification === "PASSED" ? "Test Patched ✓" : "Human Review Logged"
+                };
+                localAuditLogs.unshift(logEntry);
+                renderAuditTable();
+
+            } catch (err) {
+                resultCard.style.display = "flex";
+                classBadge.className = "status-badge status-fail";
+                classBadge.textContent = "ERROR";
+                actionBadge.className = "status-badge status-fail";
+                actionBadge.textContent = "Heal Failed";
+                rationaleText.textContent = err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `🤖 Run AI Heal Agent`;
+            }
+        }
+
+        function renderAuditTable() {
+            const tbody = document.getElementById("audit-log-body");
+            if (localAuditLogs.length === 0) return;
+
+            tbody.innerHTML = localAuditLogs.map(log => {
+                const badgeClass = log.action.includes("Patched") ? "status-pass" : "status-amber";
+                return `
+                    <tr>
+                        <td style="font-family:var(--mono);">${log.time}</td>
+                        <td><span class="status-badge" style="background:#1e293b; color:var(--cyan);">${log.mode}</span></td>
+                        <td><strong>${log.classification}</strong></td>
+                        <td style="color:var(--cyan); font-weight:700;">${log.confidence}</td>
+                        <td><span class="status-badge ${badgeClass}">${log.action}</span></td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        // Initialize audit log from server if available
+        async function loadServerAuditLog() {
+            try {
+                const res = await fetch("/api/audit-log");
+                const logs = await res.json();
+                if (logs && logs.length > 0) {
+                    localAuditLogs = logs.map(l => ({
+                        time: l.timestamp ? l.timestamp.split("_")[1] || l.timestamp : new Date().toLocaleTimeString(),
+                        mode: l.drift_mode || "DRIFT",
+                        classification: l.classification || "DRIFT",
+                        confidence: typeof l.confidence === "number" ? Math.round(l.confidence * 100) + "%" : (l.confidence || "90%"),
+                        action: l.verification_result === "PASSED" ? "Test Patched ✓" : "Human Review Logged"
+                    }));
+                    renderAuditTable();
+                }
+            } catch (err) {}
+        }
+
+        loadServerAuditLog();
+    </script>
+</body>
+</html>

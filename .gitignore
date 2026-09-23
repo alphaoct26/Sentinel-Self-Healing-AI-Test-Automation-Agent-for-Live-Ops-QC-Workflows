@@ -1,0 +1,16 @@
+# Environment & secrets
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Artifacts (generated at runtime)
+artifacts/runs/
+artifacts/repairs/
+
+# Node
+node_modules/

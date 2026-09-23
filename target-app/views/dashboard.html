@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinel QC — Demo Control Panel & Diagnostic Dashboard</title>
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --panel-bg: #131b2e;
+            --panel-border: #1e293b;
+            --card-inner: #0f172a;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-green: #10b981;
+            --accent-red: #f43f5e;
+            --accent-amber: #f59e0b;
+            --accent-purple: #8b5cf6;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --mono-font: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 100vh;
+        }
+
+        /* Top Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #1e1b4b, #0f172a);
+            border: 1px solid #312e81;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-title h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+        }
+
+        .badge-live {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+        }
+
+        .header-nav a {
+            color: #38bdf8;
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+
+        .header-nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Main Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Panel Container */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 12px;
+        }
+
+        .panel-title {
+            font-size: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-title span.num {
+            background: #1e293b;
+            color: var(--accent-cyan);
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        /* Toast Banner */
+        .toast-banner {
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid #0284c7;
+            color: #38bdf8;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn-drift {
+            padding: 12px;
+            border: 1px solid var(--panel-border);
+            background: var(--card-inner);
+            color: var(--text-main);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .btn-drift span.sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .btn-drift:hover {
+            border-color: var(--accent-blue);
+            background: #1e293b;
+        }
+
+        .btn-drift.active {
+            border-color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.1);
+        }
+
+        .btn-action {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .btn-run {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-heal {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+        }
+
+        .btn-action:hover:not(:disabled) {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-action:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Iframe Live View */
+        .iframe-container {
+            width: 100%;
+            height: 380px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--panel-border);
+            background: #000;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Status Cards */
+        .status-card {
+            background: var(--card-inner);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            width: fit-content;
+        }
+
+        .status-pass {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+        }
+
+        .status-fail {
+            background: rgba(244, 63, 94, 0.2);
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+        }
+
+        .status-amber {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--accent-amber);
+            border: 1px solid var(--accent-amber);
+        }
+
+        /* Monospace Logs & Error Boxes */
+        .code-box {
+            background: #090d16;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 12px;
+            font-family: var(--mono-font);
+            font-size: 12px;
+            line-height: 1.5;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .diff-view {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .diff-col {
+            background: #090d16;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px;
+            font-family: var(--mono-font);
+            font-size: 11px;
+        }
+
+        .diff-old {
+            border-color: rgba(244, 63, 94, 0.4);
+            color: #fda4af;
+        }
+
+        .diff-new {
+            border-color: rgba(16, 185, 129, 0.4);
+            color: #6ee7b7;
+        }
+
+        /* Confidence Progress Bar */
+        .confidence-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: #1e293b;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .confidence-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-green));
+            transition: width 0.5s ease-out;
+        }
+
+        /* Timeline / Audit Table */
+        .audit-table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table.audit-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        table.audit-table th, table.audit-table td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        table.audit-table th {
+            background: #0f172a;
+            color: var(--text-muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        table.audit-table tr:hover {
+            background: rgba(30, 41, 59, 0.5);
+        }
+
+        /* Spinner animation */
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="header-title">
+            <h1>🛡️ Sentinel QC — Demo Control Panel</h1>
+            <span class="badge-live">Live Autonomous Engine</span>
+        </div>
+        <div class="header-nav">
+            <a href="/" target="_blank">🌐 Live Target App</a>
+            <a href="#audit-panel">📋 Master Audit Index</a>
+            <a href="https://github.com/alphaoct26/Sentinel-Self-Healing-AI-Test-Automation-Agent-for-Live-Ops-QC-Workflows" target="_blank">⭐ GitHub Repo</a>
+        </div>
+    </header>
+
+    <!-- Dashboard Grid -->
+    <div class="dashboard-grid">
+
+        <!-- Panel 1: Live App Preview -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title"><span class="num">1</span> Live Leaderboard App Preview</div>
+                <button onclick="reloadPreview()" style="background:none; border:none; color:var(--accent-cyan); cursor:pointer; font-size:12px; font-weight:600;">🔄 Reload Frame</button>
+            </div>
+            <div class="iframe-container">
+                <iframe id="app-preview-iframe" src="/"></iframe>
+            </div>
+        </div>
+
+        <!-- Panel 2: Drift Control Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title"><span class="num">2</span> Simulate UI & Backend Drift</div>
+                <span id="current-drift-badge" class="badge-live" style="background:#1e293b; color:var(--accent-cyan); border-color:var(--panel-border);">Mode: NORMAL</span>
+            </div>
+
+            <div id="toast-banner" class="toast-banner" style="display:none;">
+                <span id="toast-text">Drift mode updated.</span>
+                <span style="cursor:pointer;" onclick="document.getElementById('toast-banner').style.display='none'">✕</span>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-drift active" id="btn-mode-normal" onclick="setDriftMode('NORMAL')">
+                    🟢 NORMAL MODE
+                    <span class="sub">Stable UI & working PDF export</span>
+                </button>
+                <button class="btn-drift" id="btn-mode-selector" onclick="setDriftMode('SELECTOR_DRIFT')">
+                    🔵 SELECTOR DRIFT
+                    <span class="sub">Renames #refresh-btn to #reload-leaderboard-btn</span>
+                </button>
+                <button class="btn-drift" id="btn-mode-assertion" onclick="setDriftMode('ASSERTION_DRIFT')">
+                    🟡 ASSERTION DRIFT
+                    <span class="sub">Changes badge text to "Current Tier: Elite"</span>
+                </button>
+                <button class="btn-drift" id="btn-mode-bug" onclick="setDriftMode('REAL_BUG')">
+                    🔴 REAL BUG
+                    <span class="sub">Export PDF endpoint returns HTTP 500 error</span>
+                </button>
+            </div>
+
+            <div class="code-box" id="drift-mode-info" style="font-size:12px; color:var(--text-muted);">
+Select a drift mode above to simulate real-world UI changes or backend outages in live ops.
+            </div>
+        </div>
+
+        <!-- Panel 3: Run Test Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title"><span class="num">3</span> Execute Test Suite (Playwright)</div>
+            </div>
+
+            <button class="btn-action btn-run" id="btn-run-tests" onclick="runTestSuite()">
+                <span>🚀 Execute Test Suite</span>
+            </button>
+
+            <div id="run-result-container" class="status-card" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div id="test-status-badge" class="status-badge status-pass">PASSED</div>
+                    <span id="test-timestamp" style="font-size:11px; color:var(--text-muted);">Timestamp</span>
+                </div>
+                <div id="test-error-box" class="code-box" style="display:none; color:#fca5a5; border-color:rgba(244,63,94,0.3);"></div>
+            </div>
+        </div>
+
+        <!-- Panel 4: AI Heal Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title"><span class="num">4</span> Autonomous Self-Healing AI Engine</div>
+            </div>
+
+            <button class="btn-action btn-heal" id="btn-heal-agent" onclick="runSelfHealing()">
+                <span>🤖 Run Self-Healing Agent</span>
+            </button>
+
+            <div id="heal-loading" class="status-card" style="display:none; align-items:center; gap:12px; justify-content:center; padding:20px;">
+                <div class="spinner"></div>
+                <span style="font-size:13px; font-weight:600; color:var(--accent-purple);">Analyzing DOM snapshot & diagnosing drift with NVIDIA NIM API...</span>
+            </div>
+
+            <div id="heal-result-container" class="status-card" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <span id="heal-class-badge" class="status-badge status-pass">SELECTOR_DRIFT</span>
+                    </div>
+                    <span id="heal-action-badge" class="status-badge status-pass">AUTO-PATCHED & VERIFIED</span>
+                </div>
+
+                <div>
+                    <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; font-weight:600;">
+                        <span>AI Diagnostic Confidence</span>
+                        <span id="heal-confidence-val" style="color:var(--accent-cyan);">92%</span>
+                    </div>
+                    <div class="confidence-bar-bg">
+                        <div id="heal-confidence-bar" class="confidence-bar-fill" style="width: 92%;"></div>
+                    </div>
+                </div>
+
+                <div id="heal-rationale-box" class="code-box" style="color:#e2e8f0;"></div>
+
+                <div id="heal-diff-container" style="display:none;">
+                    <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px;">Side-by-Side Code Patch Diff</div>
+                    <div class="diff-view">
+                        <div class="diff-col diff-old" id="diff-old-text">- Original Locator/Assertion</div>
+                        <div class="diff-col diff-new" id="diff-new-text">+ Repaired Locator/Assertion</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Panel 5: Audit Log Panel -->
+    <div class="panel" id="audit-panel">
+        <div class="panel-header">
+            <div class="panel-title"><span class="num">5</span> Live Master Audit Log & Repair History</div>
+            <button onclick="fetchAuditLog()" style="background:none; border:none; color:var(--accent-cyan); cursor:pointer; font-size:12px; font-weight:600;">🔄 Refresh Logs</button>
+        </div>
+
+        <div class="audit-table-wrapper">
+            <table class="audit-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Drift Mode</th>
+                        <th>Classification</th>
+                        <th>Confidence</th>
+                        <th>Safeguard Result</th>
+                        <th>Diagnostic Rationale</th>
+                    </tr>
+                </thead>
+                <tbody id="audit-table-body">
+                    <tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Loading audit log history...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let currentDriftMode = "NORMAL";
+
+        function reloadPreview() {
+            const iframe = document.getElementById("app-preview-iframe");
+            iframe.src = "/?t=" + new Date().getTime();
+        }
+
+        async function setDriftMode(mode) {
+            currentDriftMode = mode;
+
+            // Highlight button
+            document.querySelectorAll(".btn-drift").forEach(btn => btn.classList.remove("active"));
+            const activeBtn = document.getElementById("btn-mode-" + mode.split("_")[0].toLowerCase());
+            if (activeBtn) activeBtn.classList.add("active");
+
+            document.getElementById("current-drift-badge").textContent = "Mode: " + mode;
+
+            try {
+                const res = await fetch("/api/drift-mode", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ mode: mode })
+                });
+                const data = await res.json();
+                
+                // Show toast
+                const toast = document.getElementById("toast-banner");
+                document.getElementById("toast-text").textContent = `Drift mode set to ${mode} — Target app updated.`;
+                toast.style.display = "flex";
+                setTimeout(() => { toast.style.display = "none"; }, 4000);
+
+                reloadPreview();
+            } catch (err) {
+                console.error("Error setting drift mode:", err);
+            }
+        }
+
+        async function runTestSuite() {
+            const btn = document.getElementById("btn-run-tests");
+            const resultBox = document.getElementById("run-result-container");
+            const badge = document.getElementById("test-status-badge");
+            const timeEl = document.getElementById("test-timestamp");
+            const errBox = document.getElementById("test-error-box");
+
+            btn.disabled = true;
+            btn.innerHTML = `<div class="spinner"></div><span>Running Playwright Test Suite...</span>`;
+
+            try {
+                const res = await fetch("/api/run-test", { method: "POST" });
+                const data = await res.json();
+
+                resultBox.style.display = "flex";
+                timeEl.textContent = data.timestamp || new Date().toLocaleTimeString();
+
+                if (data.status === "PASSED") {
+                    badge.className = "status-badge status-pass";
+                    badge.textContent = "PASSED";
+                    errBox.style.display = "none";
+                } else {
+                    badge.className = "status-badge status-fail";
+                    badge.textContent = "FAILED";
+                    errBox.style.display = "block";
+                    errBox.textContent = data.error_summary || data.error || "Playwright locator assertion failed.";
+                }
+            } catch (err) {
+                resultBox.style.display = "flex";
+                badge.className = "status-badge status-fail";
+                badge.textContent = "ERROR";
+                errBox.style.display = "block";
+                errBox.textContent = "Failed to execute test suite: " + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<span>🚀 Execute Test Suite</span>`;
+            }
+        }
+
+        async function runSelfHealing() {
+            const btn = document.getElementById("btn-heal-agent");
+            const loading = document.getElementById("heal-loading");
+            const resultBox = document.getElementById("heal-result-container");
+            const classBadge = document.getElementById("heal-class-badge");
+            const actionBadge = document.getElementById("heal-action-badge");
+            const confVal = document.getElementById("heal-confidence-val");
+            const confBar = document.getElementById("heal-confidence-bar");
+            const rationaleBox = document.getElementById("heal-rationale-box");
+            const diffContainer = document.getElementById("heal-diff-container");
+            const diffOld = document.getElementById("diff-old-text");
+            const diffNew = document.getElementById("diff-new-text");
+
+            btn.disabled = true;
+            loading.style.display = "flex";
+            resultBox.style.display = "none";
+
+            try {
+                const res = await fetch("/api/heal", { method: "POST" });
+                const data = await res.json();
+
+                loading.style.display = "none";
+                resultBox.style.display = "flex";
+
+                const classification = data.classification || "UNKNOWN";
+                const confidence = Math.round((data.confidence || 0) * 100);
+                const verification = data.verification_result || "HUMAN_REVIEW_REQUIRED";
+
+                classBadge.textContent = classification;
+                confVal.textContent = confidence + "%";
+                confBar.style.width = confidence + "%";
+
+                if (classification === "SELECTOR_DRIFT") {
+                    classBadge.className = "status-badge status-pass";
+                } else if (classification === "ASSERTION_DRIFT") {
+                    classBadge.className = "status-badge status-pass";
+                } else {
+                    classBadge.className = "status-badge status-amber";
+                }
+
+                if (verification === "PASSED") {
+                    actionBadge.className = "status-badge status-pass";
+                    actionBadge.textContent = "AUTO-PATCHED & VERIFIED";
+                } else {
+                    actionBadge.className = "status-badge status-amber";
+                    actionBadge.textContent = "HUMAN REVIEW LOGGED (PATCH REFUSED)";
+                }
+
+                rationaleBox.textContent = data.rationale || data.diagnosis || "Self-healing diagnostic finished.";
+
+                if (data.diff && data.diff !== "No code changes made (Safeguard Triggered).") {
+                    diffContainer.style.display = "block";
+                    diffOld.textContent = data.diff.split("\n").filter(l => l.startswith("-")).join("\n") || "- Locator changed";
+                    diffNew.textContent = data.diff.split("\n").filter(l => l.startswith("+")).join("\n") || "+ Locator updated";
+                } else {
+                    diffContainer.style.display = "none";
+                }
+
+                // Refresh audit log table automatically
+                fetchAuditLog();
+
+            } catch (err) {
+                loading.style.display = "none";
+                resultBox.style.display = "flex";
+                classBadge.className = "status-badge status-fail";
+                classBadge.textContent = "ERROR";
+                actionBadge.className = "status-badge status-fail";
+                actionBadge.textContent = "HEAL FAILED";
+                rationaleBox.textContent = "Error executing self-healing agent: " + err.message;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function fetchAuditLog() {
+            const tbody = document.getElementById("audit-table-body");
+            try {
+                const res = await fetch("/api/audit-log");
+                const logs = await res.json();
+
+                if (!logs || logs.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No audit repair entries found.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = logs.map(log => {
+                    const conf = typeof log.confidence === "number" ? Math.round(log.confidence * 100) + "%" : (log.confidence || "N/A");
+                    const resClass = log.verification_result === "PASSED" ? "status-pass" : "status-amber";
+                    return `
+                        <tr>
+                            <td style="font-family:var(--mono-font); font-size:12px;">${log.timestamp || 'N/A'}</td>
+                            <td><span class="status-badge" style="background:#1e293b; color:var(--accent-cyan);">${log.drift_mode || 'UNKNOWN'}</span></td>
+                            <td><strong>${log.classification || 'N/A'}</strong></td>
+                            <td style="color:var(--accent-cyan); font-weight:700;">${conf}</td>
+                            <td><span class="status-badge ${resClass}">${log.verification_result || 'HUMAN_REVIEW'}</span></td>
+                            <td style="font-size:12px; color:var(--text-muted); max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${log.diagnosis || log.rationale || ''}</td>
+                        </tr>
+                    `;
+                }).join("");
+
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--accent-red);">Failed to load audit logs: ${err.message}</td></tr>`;
+            }
+        }
+
+        // Initialize on load
+        fetchAuditLog();
+    </script>
+</body>
+</html>

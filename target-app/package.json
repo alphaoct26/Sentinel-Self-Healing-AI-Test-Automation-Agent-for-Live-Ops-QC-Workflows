@@ -1,0 +1,12 @@
+{
+  "name": "sentinel-target-app",
+  "version": "1.0.0",
+  "description": "Standalone Drift-Simulation Target App for Sentinel AI QC Agent",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
