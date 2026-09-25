@@ -4,7 +4,7 @@
 
 ---
 
-## ⚡ 10-Second Pitch: Why This Matters for Live-Service QA (e.g., Ubisoft)
+## ⚡Pitch: Why This Matters for Live-Service QA (
 
 In fast-paced live-service game development, developers constantly push minor UI tweaks—renaming button IDs, updating tier label copy, or tweaking layout elements. Traditional automated test suites break immediately on these harmless cosmetic changes, triggering false-positive alerts that force QA engineers to manually fix broken locators dozens of times a week.
 
