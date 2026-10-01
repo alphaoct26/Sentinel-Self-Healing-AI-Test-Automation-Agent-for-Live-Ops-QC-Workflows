@@ -12,7 +12,7 @@ def test_refresh_leaderboard_and_rank_tier():
         page.goto(TARGET_URL)
 
         # Click refresh leaderboard button
-        refresh_btn = page.locator("#reload-leaderboard-btn")
+        refresh_btn = page.locator("#refresh-btn")
         expect(refresh_btn).to_be_visible()
         refresh_btn.click()
 
@@ -33,7 +33,7 @@ def test_export_match_report():
         page.goto(TARGET_URL)
 
         # Trigger refresh first to show results section
-        refresh_btn = page.locator("#reload-leaderboard-btn")
+        refresh_btn = page.locator("#refresh-btn")
         refresh_btn.click()
 
         # Click export match report button

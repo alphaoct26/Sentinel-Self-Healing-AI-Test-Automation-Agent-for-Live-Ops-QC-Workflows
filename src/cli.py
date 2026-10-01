@@ -65,7 +65,9 @@ def main():
 
     elif args.command == "run":
         print("=== [Sentinel] Executing Playwright Test Suite ===")
-        run_test_suite()
+        results, _ = run_test_suite()
+        if results.get("status") != "PASSED":
+            sys.exit(1)
 
     elif args.command == "heal":
         print("=== [Sentinel] Running Self-Healing Diagnostic & Safeguard Engine ===")
