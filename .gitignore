@@ -1,16 +1,37 @@
 # Environment & secrets
 .env
 *.env
+.env.*
 
-# Python
+# Python Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python Cache & Bytecode
 __pycache__/
 *.py[cod]
+*$py.class
 *.pyo
 .pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
 
-# Artifacts (generated at runtime)
+# Logs
+*.log
+logs/
+
+# Runtime Artifacts
 artifacts/runs/
 artifacts/repairs/
+artifacts/*.png
+artifacts/*.json
+!artifacts/AUDIT_LOG.md
 
 # Node
 node_modules/
+npm-debug.log*

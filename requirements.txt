@@ -1,0 +1,5 @@
+openai==2.32.0
+playwright==1.63.0
+pytest==9.1.1
+python-dotenv==1.2.2
+requests==2.33.1
