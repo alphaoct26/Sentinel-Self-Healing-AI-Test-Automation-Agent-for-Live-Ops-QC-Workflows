@@ -58,6 +58,7 @@ Tested against live application mutations with full Playwright test execution, m
 - **Feature Spec**: Plain-English Leaderboard Spec ([`specs/leaderboard_spec.md`](file:///d:/Projects/sentinel-qc/specs/leaderboard_spec.md))
 - **Visual Audit Logs**: Timestamped Before/After Screenshots & Diffs ([`artifacts/repairs/`](file:///d:/Projects/sentinel-qc/artifacts/repairs/))
 - **Master Audit Index**: [`artifacts/AUDIT_LOG.md`](file:///d:/Projects/sentinel-qc/artifacts/AUDIT_LOG.md)
+- **Confidence Scoring Documentation**: [`docs/confidence-scoring.md`](file:///d:/Projects/sentinel-qc/docs/confidence-scoring.md)
 
 ---
 
