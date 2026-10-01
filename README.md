@@ -55,6 +55,7 @@ Tested against live application mutations with full Playwright test execution, m
 ## 🌐 Live Demo & Repository Structure
 
 - **Target App**: Live Leaderboard & Match Stats Dashboard ([`target-app/views/index.html`](file:///d:/Projects/sentinel-qc/target-app/views/index.html))
+- **Master Architecture & PPT Overview**: [`docs/SENTINEL_MASTER_OVERVIEW.md`](file:///d:/Projects/sentinel-qc/docs/SENTINEL_MASTER_OVERVIEW.md)
 - **Feature Spec**: Plain-English Leaderboard Spec ([`specs/leaderboard_spec.md`](file:///d:/Projects/sentinel-qc/specs/leaderboard_spec.md))
 - **Visual Audit Logs**: Timestamped Before/After Screenshots & Diffs ([`artifacts/repairs/`](file:///d:/Projects/sentinel-qc/artifacts/repairs/))
 - **Master Audit Index**: [`artifacts/AUDIT_LOG.md`](file:///d:/Projects/sentinel-qc/artifacts/AUDIT_LOG.md)
