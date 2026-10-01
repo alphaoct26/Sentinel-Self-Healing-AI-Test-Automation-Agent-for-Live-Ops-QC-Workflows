@@ -13,10 +13,6 @@ from src.ragEngine import ask_question
 
 def set_drift_mode(mode_name):
     mode_clean = mode_name.upper()
-    valid_modes = ["NORMAL", "SELECTOR_DRIFT", "ASSERTION_DRIFT", "REAL_BUG"]
-    if mode_clean not in valid_modes:
-        print(f"[CLI Error] Invalid drift mode '{mode_name}'. Valid options: {', '.join(valid_modes)}")
-        return False
 
     try:
         res = requests.post(f"{TARGET_APP_URL}/api/drift", json={"mode": mode_clean}, timeout=3)
@@ -47,7 +43,7 @@ def main():
 
     # Command: drift
     drift_parser = subparsers.add_parser("drift", help="Set target app's drift mode")
-    drift_parser.add_argument("mode", choices=["NORMAL", "SELECTOR_DRIFT", "ASSERTION_DRIFT", "REAL_BUG"], help="Drift mode state")
+    drift_parser.add_argument("mode", help="Drift mode state (e.g. NORMAL, SELECTOR_DRIFT, BUG_HTTP_500, etc.)")
 
     # Command: ask
     ask_parser = subparsers.add_parser("ask", help="Query RAG knowledge assistant over specs and logs")

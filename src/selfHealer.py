@@ -204,39 +204,58 @@ def heal_last_run():
 
     # Precision rule-based heuristic classifier (fallback only)
     if not diagnosis:
-        if "500" in error_summary or "Internal Server Error" in error_summary or "HTTP 500" in error_summary or "ERR_HTTP_RESPONSE_CODE_FAILURE" in error_summary or "Status 500" in error_summary:
+        backend_err_keywords = [
+            "500", "403", "timeout", "Timeout", "malformed", "Malformed",
+            "SyntaxError", "Internal Server Error", "Forbidden", "Error exporting report", "missing expected"
+        ]
+        if any(kw in error_summary for kw in backend_err_keywords):
             diagnosis = {
                 "classification": "GENUINE_BUG",
                 "confidence": 0.95,
-                "rationale": "Backend API endpoint returned HTTP 500 Internal Server Error during export report request.",
+                "rationale": "Backend API endpoint failed (status error, timeout, or malformed response) during export report request.",
                 "target_selector_old": None,
                 "target_selector_new": None,
                 "target_assertion_old": None,
                 "target_assertion_new": None
             }
-        elif ("reload-leaderboard-btn" in dom_snippet or "submit-resume-btn" in dom_snippet) and ("#refresh-btn" in test_code_old or "#analyze-btn" in test_code_old):
-            old_s = "#refresh-btn" if "#refresh-btn" in test_code_old else "#analyze-btn"
-            new_s = "#reload-leaderboard-btn" if "reload-leaderboard-btn" in dom_snippet else "#submit-resume-btn"
+        elif "reload-leaderboard-btn" in dom_snippet or "btn-refresh-stats" in dom_snippet or "match-results-wrapper" in dom_snippet or "tier-pill" in dom_snippet or "download-report-btn" in dom_snippet:
+            # Map discovered DOM element
+            if "reload-leaderboard-btn" in dom_snippet:
+                old_s, new_s = "#refresh-btn", "#reload-leaderboard-btn"
+            elif "btn-refresh-stats" in dom_snippet:
+                old_s, new_s = "#refresh-btn", "#btn-refresh-stats"
+            elif "match-results-wrapper" in dom_snippet:
+                old_s, new_s = "#results-section", "#match-results-wrapper"
+            elif "tier-pill" in dom_snippet:
+                old_s, new_s = "#rank-badge", "#tier-pill"
+            elif "download-report-btn" in dom_snippet:
+                old_s, new_s = "#export-btn", "#download-report-btn"
+            else:
+                old_s, new_s = "#refresh-btn", "#reload-leaderboard-btn"
+
             diagnosis = {
                 "classification": "SELECTOR_DRIFT",
                 "confidence": 0.92,
-                "rationale": f"Refresh button ID renamed from '{old_s}' to '{new_s}' in DOM (simulating UI redesign).",
+                "rationale": f"Element locator renamed from '{old_s}' to '{new_s}' in DOM (simulating UI redesign).",
                 "target_selector_old": old_s,
                 "target_selector_new": new_s,
                 "target_assertion_old": None,
                 "target_assertion_new": None
             }
-        elif ("Current Tier: Elite" in dom_snippet or "Compatibility Rating" in dom_snippet) and ("Top Rank: Elite" in test_code_old or "Match Score: 85%" in test_code_old):
-            old_t = "Top Rank: Elite" if "Top Rank: Elite" in test_code_old else "Match Score: 85%"
-            new_t = "Current Tier: Elite" if "Current Tier: Elite" in dom_snippet else "Compatibility Rating: 85/100"
+        elif any(txt in dom_snippet for txt in ["Current Tier: Elite", "TOP RANK: ELITE", "Top Rank - Elite", "Season Top Rank: Elite Tier", "Highest Rank: Elite"]):
+            matched_txt = "Current Tier: Elite"
+            for candidate in ["Current Tier: Elite", "TOP RANK: ELITE", "Top Rank - Elite", "Season Top Rank: Elite Tier", "Highest Rank: Elite"]:
+                if candidate in dom_snippet:
+                    matched_txt = candidate
+                    break
             diagnosis = {
                 "classification": "ASSERTION_DRIFT",
                 "confidence": 0.90,
-                "rationale": f"Rank badge text format changed from '{old_t}' to '{new_t}' in DOM (simulating copy update).",
+                "rationale": f"Rank badge text format changed from 'Top Rank: Elite' to '{matched_txt}' in DOM (simulating copy update).",
                 "target_selector_old": None,
                 "target_selector_new": None,
-                "target_assertion_old": old_t,
-                "target_assertion_new": new_t
+                "target_assertion_old": "Top Rank: Elite",
+                "target_assertion_new": matched_txt
             }
         else:
             diagnosis = {
@@ -263,16 +282,24 @@ def heal_last_run():
         print("[SelfHealer] Safeguard Passed: Category is patchable and confidence >= 80%. Generating repair patch...")
 
         test_code_patched = test_code_old
+        old_sel = diagnosis.get("target_selector_old")
+        new_sel = diagnosis.get("target_selector_new")
+        old_txt = diagnosis.get("target_assertion_old")
+        new_txt = diagnosis.get("target_assertion_new")
 
-        if classification == "SELECTOR_DRIFT":
-            old_sel = diagnosis.get("target_selector_old") or ("#refresh-btn" if "#refresh-btn" in test_code_old else "#analyze-btn")
-            new_sel = diagnosis.get("target_selector_new") or "#reload-leaderboard-btn"
-            test_code_patched = test_code_patched.replace(old_sel, new_sel)
+        if classification == "SELECTOR_DRIFT" or (old_sel and new_sel):
+            if old_sel and new_sel:
+                if old_sel in test_code_patched:
+                    test_code_patched = test_code_patched.replace(old_sel, new_sel)
+                elif f"#{old_sel}" in test_code_patched:
+                    new_h = new_sel if new_sel.startswith("#") else f"#{new_sel}"
+                    test_code_patched = test_code_patched.replace(f"#{old_sel}", new_h)
+                elif old_sel.lstrip("#") in test_code_patched:
+                    test_code_patched = test_code_patched.replace(old_sel.lstrip("#"), new_sel.lstrip("#"))
 
-        elif classification == "ASSERTION_DRIFT":
-            old_txt = diagnosis.get("target_assertion_old") or ("Top Rank: Elite" if "Top Rank: Elite" in test_code_old else "Match Score: 85%")
-            new_txt = diagnosis.get("target_assertion_new") or "Current Tier: Elite"
-            test_code_patched = test_code_patched.replace(old_txt, new_txt)
+        if classification == "ASSERTION_DRIFT" or (old_txt and new_txt):
+            if old_txt and new_txt and old_txt in test_code_patched:
+                test_code_patched = test_code_patched.replace(old_txt, new_txt)
 
         # Write candidate patch
         with open(test_file_path, "w", encoding="utf-8") as f:

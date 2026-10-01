@@ -1,6 +1,7 @@
 import os
 import json
 import sys
+import time
 import subprocess
 import datetime
 from pathlib import Path
@@ -9,6 +10,7 @@ from urllib.parse import parse_qs, urlparse
 
 PORT = 3001
 DRIFT_MODE = "NORMAL"
+INTERMITTENT_FLAG = False
 
 BASE_DIR = Path(__file__).resolve().parent
 VIEWS_DIR = BASE_DIR / "views"
@@ -96,15 +98,64 @@ class TargetAppHandler(BaseHTTPRequestHandler):
         # Serve index.html for root or any HTML request
         html_path = VIEWS_DIR / "index.html"
         if html_path.exists():
+            if DRIFT_MODE == "SLOW_INITIAL_RENDER":
+                time.sleep(1.2)
+
             with open(html_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            refresh_btn_id = "reload-leaderboard-btn" if DRIFT_MODE == "SELECTOR_DRIFT" else "refresh-btn"
-            rank_badge_text = "Current Tier: Elite" if DRIFT_MODE == "ASSERTION_DRIFT" else "Top Rank: Elite"
+            refresh_btn_id = "refresh-btn"
+            results_section_id = "results-section"
+            rank_badge_id = "rank-badge"
+            export_btn_id = "export-btn"
+            rank_badge_text = "Top Rank: Elite"
+            moved_wrapper_start = ""
+            moved_wrapper_end = ""
+            toolbar_wrapper_start = ""
+            toolbar_wrapper_end = ""
+
+            # Selector mutations
+            if DRIFT_MODE in ["SELECTOR_DRIFT", "SELECTOR_RENAME_BTN", "COMPOUND_SELECTOR_AND_500", "COMPOUND_SELECTOR_AND_COPY"]:
+                refresh_btn_id = "reload-leaderboard-btn"
+            elif DRIFT_MODE == "SELECTOR_PREFIX_CHANGE":
+                refresh_btn_id = "btn-refresh-stats"
+            elif DRIFT_MODE == "SELECTOR_RENAME_CONTAINER":
+                results_section_id = "match-results-wrapper"
+            elif DRIFT_MODE == "SELECTOR_RENAME_BADGE":
+                rank_badge_id = "tier-pill"
+            elif DRIFT_MODE == "SELECTOR_RENAME_EXPORT":
+                export_btn_id = "download-report-btn"
+
+            # Copy/Assertion mutations
+            if DRIFT_MODE in ["ASSERTION_DRIFT", "COPY_RANK_TIER_LABEL", "COMPOUND_COPY_AND_403", "COMPOUND_SELECTOR_AND_COPY"]:
+                rank_badge_text = "Current Tier: Elite"
+            elif DRIFT_MODE == "COPY_CASE_CHANGE":
+                rank_badge_text = "TOP RANK: ELITE"
+            elif DRIFT_MODE == "COPY_PUNCTUATION_CHANGE":
+                rank_badge_text = "Top Rank - Elite"
+            elif DRIFT_MODE == "COPY_EXPANDED_PHRASE":
+                rank_badge_text = "Season Top Rank: Elite Tier"
+            elif DRIFT_MODE == "COPY_LOCALIZED_SYNONYM":
+                rank_badge_text = "Highest Rank: Elite"
+
+            # Moved DOM mutations
+            if DRIFT_MODE == "MOVED_ELEMENT_NESTED":
+                moved_wrapper_start = '<div class="sub-card-container" style="padding: 4px; border: 1px dashed #475569; border-radius: 6px;">'
+                moved_wrapper_end = '</div>'
+            elif DRIFT_MODE == "MOVED_BUTTON_CONTAINER":
+                toolbar_wrapper_start = '<div class="action-toolbar" style="margin-top: 10px; display: flex; gap: 8px;">'
+                toolbar_wrapper_end = '</div>'
 
             content = content.replace("{{DRIFT_MODE}}", DRIFT_MODE)
             content = content.replace("{{REFRESH_BTN_ID}}", refresh_btn_id)
+            content = content.replace("{{RESULTS_SECTION_ID}}", results_section_id)
+            content = content.replace("{{RANK_BADGE_ID}}", rank_badge_id)
+            content = content.replace("{{EXPORT_BTN_ID}}", export_btn_id)
             content = content.replace("{{RANK_BADGE_TEXT}}", rank_badge_text)
+            content = content.replace("{{MOVED_WRAPPER_START}}", moved_wrapper_start)
+            content = content.replace("{{MOVED_WRAPPER_END}}", moved_wrapper_end)
+            content = content.replace("{{TOOLBAR_WRAPPER_START}}", toolbar_wrapper_start)
+            content = content.replace("{{TOOLBAR_WRAPPER_END}}", toolbar_wrapper_end)
 
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -133,7 +184,7 @@ class TargetAppHandler(BaseHTTPRequestHandler):
 
         if parsed.path in ["/api/drift", "/api/drift-mode"]:
             new_mode = body.get("mode", "").upper()
-            if new_mode in ["NORMAL", "SELECTOR_DRIFT", "ASSERTION_DRIFT", "REAL_BUG"]:
+            if new_mode:
                 DRIFT_MODE = new_mode
                 print(f"[TargetApp Server] DRIFT_MODE set to: {DRIFT_MODE}")
 
@@ -227,11 +278,45 @@ class TargetAppHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/export-pdf":
-            if DRIFT_MODE == "REAL_BUG":
+            global INTERMITTENT_FLAG
+            if DRIFT_MODE in ["REAL_BUG", "BUG_HTTP_500", "COMPOUND_SELECTOR_AND_500"]:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": "Internal Server Error: HTTP 500 PDF generator failed"}).encode("utf-8"))
+            elif DRIFT_MODE in ["BUG_HTTP_403_FORBIDDEN", "COMPOUND_COPY_AND_403"]:
+                self.send_response(403)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Forbidden: HTTP 403 Insufficient QC export permissions"}).encode("utf-8"))
+            elif DRIFT_MODE == "BUG_MALFORMED_JSON":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b"<<<Corrupted Non-JSON Server Stream>>>")
+            elif DRIFT_MODE == "BUG_SERVER_TIMEOUT":
+                time.sleep(4.0)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "pdf_url": "/downloads/report.pdf"}).encode("utf-8"))
+            elif DRIFT_MODE == "BUG_MISSING_PAYLOAD_FIELD":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({}).encode("utf-8"))
+            elif DRIFT_MODE == "INTERMITTENT_EXPORT_FAILURE":
+                INTERMITTENT_FLAG = not INTERMITTENT_FLAG
+                if INTERMITTENT_FLAG:
+                    self.send_response(500)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Transient Internal Server Error (Retry suggested)"}).encode("utf-8"))
+                else:
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"status": "success", "pdf_url": "/downloads/report.pdf"}).encode("utf-8"))
             else:
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
