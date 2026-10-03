@@ -3,122 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sentinel QC Demo — Live Leaderboard & Match Stats</title>
+    <title>Sentinel QC Demo — Live Cyber Arena & Match Stats</title>
     <style>
         :root {
-            --bg: #0f172a;
-            --card-bg: #1e293b;
+            --bg: #090d16;
+            --card-bg: rgba(19, 26, 42, 0.85);
+            --card-border: #1e293b;
             --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.4);
+            --accent: #8b5cf6;
             --success: #10b981;
             --danger: #ef4444;
             --warning: #f59e0b;
             --text: #f8fafc;
             --text-muted: #94a3b8;
-            --border: #334155;
+            --border: #223049;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg);
+            background-image: 
+                radial-gradient(circle at 15% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 40%);
             color: var(--text);
             margin: 0;
-            padding: 20px;
+            padding: 24px 16px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 100vh;
         }
 
         .banner {
             width: 100%;
-            max-width: 680px;
-            background: linear-gradient(135deg, #1e1b4b, #312e81);
-            border: 1px solid #4338ca;
+            max-width: 720px;
+            background: linear-gradient(135deg, #131b31, #1e1b4b);
+            border: 1px solid #3730a3;
             border-radius: 12px;
             padding: 16px 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
             text-align: center;
-            box-sizing: border-box;
         }
 
         .banner-title {
             font-size: 18px;
             font-weight: 700;
-            color: #818cf8;
+            color: #a5b4fc;
+            letter-spacing: 0.5px;
             margin-bottom: 6px;
         }
 
         .banner-sub {
             font-size: 13px;
-            color: #c7d2fe;
+            color: #cbd5e1;
             margin-bottom: 8px;
         }
 
         .banner-note {
             font-size: 12px;
-            color: #a5b4fc;
+            color: #94a3b8;
         }
 
         .banner-note a {
             color: #38bdf8;
             text-decoration: underline;
+            font-weight: 600;
         }
 
         .container {
             width: 100%;
-            max-width: 680px;
+            max-width: 720px;
             background: var(--card-bg);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 32px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            box-sizing: border-box;
+            border-radius: 14px;
+            padding: 28px;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+        }
+
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 16px;
         }
 
         h1 {
-            font-size: 24px;
-            margin-top: 0;
-            margin-bottom: 8px;
+            font-size: 22px;
+            margin: 0 0 6px 0;
             color: #ffffff;
+            letter-spacing: -0.3px;
         }
 
         p.subtitle {
             color: var(--text-muted);
-            margin-top: 0;
-            margin-bottom: 24px;
-            font-size: 14px;
+            margin: 0;
+            font-size: 13px;
         }
 
+        .drift-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            background: #1e293b;
+            color: #38bdf8;
+            border: 1px solid #334155;
+        }
+
+        /* Drift selector box */
         .drift-selector-box {
-            background: #0f172a;
+            background: rgba(15, 23, 42, 0.7);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 24px;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 20px;
         }
 
         .drift-selector-box label {
             display: block;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: #38bdf8;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         select.drift-select {
             width: 100%;
-            padding: 10px;
-            background: #1e293b;
+            padding: 10px 12px;
+            background: #131c2e;
             border: 1px solid var(--border);
             border-radius: 6px;
             color: var(--text);
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            box-sizing: border-box;
             outline: none;
+            transition: border-color 0.2s;
         }
 
         select.drift-select:focus {
@@ -126,29 +160,202 @@
         }
 
         .drift-description {
-            margin-top: 10px;
-            font-size: 13px;
-            color: #cbd5e1;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #94a3b8;
             font-style: italic;
-            line-height: 1.4;
         }
 
-        .drift-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 20px;
+        /* Interactive Cyber Game Arena */
+        .game-arena-card {
+            background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .game-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .game-title::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .game-stats-bar {
+            display: flex;
+            gap: 16px;
             font-size: 12px;
-            font-weight: 600;
-            background: #334155;
+            color: var(--text-muted);
+        }
+
+        .stat-val {
             color: #38bdf8;
-            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .arena-canvas {
+            height: 180px;
+            background: #080d19;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            user-select: none;
+            cursor: crosshair;
+        }
+
+        .arena-grid-overlay {
+            position: absolute;
+            inset: 0;
+            background-size: 20px 20px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            pointer-events: none;
+        }
+
+        .target-orb {
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #38bdf8 0%, #2563eb 70%, #1e40af 100%);
+            border: 2px solid #60a5fa;
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.7);
+            cursor: pointer;
+            transition: transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: white;
+            font-weight: bold;
+            animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .target-orb:hover {
+            transform: scale(1.1);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .match-overlay-screen {
+            position: absolute;
+            inset: 0;
+            background: rgba(8, 13, 25, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 16px;
+        }
+
+        .match-win-banner {
+            font-size: 20px;
+            font-weight: 800;
+            color: #10b981;
+            text-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .match-score-summary {
+            font-size: 13px;
+            color: #cbd5e1;
+            margin-bottom: 12px;
+        }
+
+        .arena-btn {
+            padding: 8px 18px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .arena-btn-primary {
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 0 14px rgba(37, 99, 235, 0.5);
+        }
+
+        .arena-btn-primary:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+
+        .arena-btn-secondary {
+            background: #334155;
+            color: #e2e8f0;
+            margin-left: 8px;
+        }
+
+        .arena-btn-secondary:hover {
+            background: #475569;
+        }
+
+        /* Leaderboard Table */
+        .table-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .table-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #cbd5e1;
         }
 
         .leaderboard-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
-            background: #0f172a;
+            background: #0b1120;
             border-radius: 8px;
             overflow: hidden;
             border: 1px solid var(--border);
@@ -157,36 +364,30 @@
         .leaderboard-table th, .leaderboard-table td {
             padding: 12px 16px;
             text-align: left;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .leaderboard-table th {
-            background: #1e293b;
+            background: #131c2e;
             color: #38bdf8;
             font-weight: 700;
             text-transform: uppercase;
-            font-size: 12px;
-            letter-spacing: 0.5px;
+            font-size: 11px;
+            letter-spacing: 0.6px;
+            border-bottom: 1px solid var(--border);
         }
 
         .leaderboard-table td {
-            border-bottom: 1px solid #1e293b;
+            border-bottom: 1px solid #162035;
         }
 
-        .badge-online {
-            color: var(--success);
-            font-weight: 600;
+        .leaderboard-table tr:hover {
+            background: rgba(30, 41, 59, 0.4);
         }
 
-        .badge-inmatch {
-            color: var(--warning);
-            font-weight: 600;
-        }
-
-        .badge-offline {
-            color: var(--text-muted);
-            font-weight: 600;
-        }
+        .badge-online { color: var(--success); font-weight: 600; }
+        .badge-inmatch { color: var(--warning); font-weight: 600; }
+        .badge-offline { color: var(--text-muted); font-weight: 600; }
 
         .action-btn {
             width: 100%;
@@ -195,73 +396,108 @@
             color: white;
             border: none;
             border-radius: 6px;
-            font-size: 15px;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 700;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
 
         .action-btn:hover {
-            opacity: 0.9;
+            background: #2563eb;
+            transform: translateY(-1px);
         }
 
         .results-section {
-            margin-top: 28px;
-            padding-top: 24px;
+            margin-top: 24px;
+            padding-top: 20px;
             border-top: 1px solid var(--border);
             display: none;
         }
 
         .score-box {
-            background: #0f172a;
-            border: 1px solid var(--border);
+            background: #080d19;
+            border: 1px solid #1e293b;
             padding: 16px;
             border-radius: 8px;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .score-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
         }
 
         .score-value {
             font-size: 20px;
-            font-weight: 700;
+            font-weight: 800;
             color: var(--success);
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
         }
 
         .export-btn {
-            background: var(--success);
+            background: #059669;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+        }
+
+        .export-btn:hover {
+            background: #047857;
         }
 
         .error-msg {
             color: var(--danger);
             margin-top: 12px;
-            font-size: 14px;
+            font-size: 13px;
             display: none;
             background: rgba(239, 68, 68, 0.1);
             border: 1px solid var(--danger);
             padding: 10px;
             border-radius: 6px;
+            text-align: center;
+        }
+
+        .download-toast {
+            display: none;
+            margin-top: 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success);
+            color: #34d399;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
     <div class="banner">
-        <div class="banner-title">Sentinel QC Demo — Live Leaderboard & Match Stats</div>
-        <div class="banner-sub">Drift-simulation live-service game dashboard for Sentinel self-healing test automation agent.</div>
+        <div class="banner-title">Sentinel QC Demo — Live Cyber Arena &amp; Match Stats</div>
+        <div class="banner-sub">Playable reflex mini-game &amp; live-ops competitive leaderboard with autonomous test self-healing.</div>
         <div class="banner-note">
-            <a href="/dashboard.html" style="color: #38bdf8; font-weight: 700; text-decoration: underline;">🎛️ Open Demo Dashboard</a> | 
-            <a href="https://github.com/alphaoct26/Sentinel-Self-Healing-AI-Test-Automation-Agent-for-Live-Ops-QC-Workflows" target="_blank">GitHub Repository</a> | 
-            <a href="https://youtube.com/watch?v=demo-placeholder" target="_blank">Demo Video</a>
+            <a href="/dashboard.html">🎛️ Open QC Control Panel</a> | 
+            <a href="https://github.com/alphaoct26/Sentinel-Self-Healing-AI-Test-Automation-Agent-for-Live-Ops-QC-Workflows" target="_blank">GitHub Repository</a>
         </div>
     </div>
 
     <div class="container">
-        <h1>Live Leaderboard &amp; Match Stats</h1>
-        <p class="subtitle">Real-time competitive match rankings &amp; live-service player metrics</p>
+        <div class="header-section">
+            <div>
+                <h1>Cyber Arena: Match Standings</h1>
+                <p class="subtitle">Season 4 competitive live-service player metrics</p>
+            </div>
+            <div class="drift-badge" id="drift-mode-indicator">Mode: {{DRIFT_MODE}}</div>
+        </div>
 
+        <!-- Simulated UI Drift Selector -->
         <div class="drift-selector-box">
-            <label for="drift-selector">Simulated UI Drift Mode:</label>
+            <label for="drift-selector">Simulated UI Mutation Mode:</label>
             <select id="drift-selector" class="drift-select">
-                <option value="NORMAL">Normal Mode (Stable UI & API)</option>
+                <option value="NORMAL">Normal Mode (Stable UI &amp; API)</option>
                 <option value="SELECTOR_DRIFT">Selector Drift (Renamed Button ID)</option>
                 <option value="ASSERTION_DRIFT">Assertion Drift (Changed Copy Wording)</option>
                 <option value="REAL_BUG">Real Bug (HTTP 500 Endpoint Error)</option>
@@ -269,7 +505,37 @@
             <div class="drift-description" id="drift-desc"></div>
         </div>
 
-        <div class="drift-badge" id="drift-mode-indicator">Mode: {{DRIFT_MODE}}</div>
+        <!-- Real Playable Mini-Game Arena -->
+        <div class="game-arena-card">
+            <div class="game-header">
+                <div class="game-title">Cyber Target Arena (Single Player Match)</div>
+                <div class="game-stats-bar">
+                    <span>Score: <span id="game-score" class="stat-val">0</span></span>
+                    <span>Hits: <span id="game-hits" class="stat-val">0</span>/5</span>
+                    <span>Time: <span id="game-timer" class="stat-val">Ready</span></span>
+                </div>
+            </div>
+
+            <div class="arena-canvas" id="arena-board">
+                <div class="arena-grid-overlay"></div>
+                
+                <!-- Start / Outcome Overlay Screen -->
+                <div class="match-overlay-screen" id="match-overlay">
+                    <div id="match-status-msg" class="match-win-banner">Ready for Match</div>
+                    <div id="match-summary-text" class="match-score-summary">Click targets as fast as possible to climb the live leaderboard.</div>
+                    <div>
+                        <button id="start-match-btn" class="arena-btn arena-btn-primary" type="button">▶ Start Aim Match</button>
+                        <button id="quick-sim-btn" class="arena-btn arena-btn-secondary" type="button">⚡ Quick Blitz</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard Table -->
+        <div class="table-header-row">
+            <div class="table-title">Season Rankings</div>
+            <div style="font-size: 12px; color: #94a3b8;">Top 5 Players</div>
+        </div>
 
         <table class="leaderboard-table">
             <thead>
@@ -280,8 +546,8 @@
                     <th>Status</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr><td>#1</td><td>Viper_QC</td><td>14,250</td><td><span class="badge-online">Online</span></td></tr>
+            <tbody id="leaderboard-tbody">
+                <tr id="player-row-1"><td>#1</td><td>Viper_QC (You)</td><td id="viper-score">14,250</td><td><span class="badge-online">Online</span></td></tr>
                 <tr><td>#2</td><td>Ghost_Agent</td><td>12,890</td><td><span class="badge-online">Online</span></td></tr>
                 <tr><td>#3</td><td>Shadow_Ninja</td><td>11,400</td><td><span class="badge-inmatch">In-Match</span></td></tr>
                 <tr><td>#4</td><td>Apex_Predator</td><td>9,750</td><td><span class="badge-online">Online</span></td></tr>
@@ -289,23 +555,31 @@
             </tbody>
         </table>
 
+        <!-- Playwright Target: Refresh Leaderboard Button -->
         <button id="{{REFRESH_BTN_ID}}" class="action-btn">Refresh Leaderboard</button>
 
+        <!-- Playwright Target: Results Section & Rank Badge -->
         <div class="results-section" id="{{RESULTS_SECTION_ID}}">
             <div class="score-box">
+                <div class="score-label">Verified Player Tier Status</div>
                 {{MOVED_WRAPPER_START}}
                 <div class="score-value" id="{{RANK_BADGE_ID}}">{{RANK_BADGE_TEXT}}</div>
                 {{MOVED_WRAPPER_END}}
             </div>
 
+            <!-- Playwright Target: Export Button -->
             {{TOOLBAR_WRAPPER_START}}
             <button id="{{EXPORT_BTN_ID}}" class="action-btn export-btn">Export Match Report</button>
             {{TOOLBAR_WRAPPER_END}}
+
+            <!-- Playwright Target: Error Display -->
             <div class="error-msg" id="error-display"></div>
+            <div class="download-toast" id="download-toast">✓ Match Report downloaded successfully (CSV/JSON)!</div>
         </div>
     </div>
 
     <script>
+        // --- Drift Mode Descriptions ---
         const driftDescriptions = {
             "NORMAL": "Simulates stable UI locators (#refresh-btn), tier labels, and backend responses.",
             "SELECTOR_DRIFT": "Renames Refresh button ID from #refresh-btn to #reload-leaderboard-btn.",
@@ -348,19 +622,156 @@
             });
         }
 
+        // --- Sound Effects via Web Audio API (Synthesizer, No External Assets) ---
+        const audioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
+        function playBeep(freq = 600, duration = 0.08, type = "sine") {
+            if (!audioCtx) return;
+            try {
+                if (audioCtx.state === "suspended") audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        // --- Interactive Single-Player Mini-Game Logic ---
+        let matchScore = 0;
+        let hitsCount = 0;
+        const totalTargets = 5;
+        let gameActive = false;
+        let targetTimeout = null;
+
+        const arenaBoard = document.getElementById("arena-board");
+        const matchOverlay = document.getElementById("match-overlay");
+        const matchStatusMsg = document.getElementById("match-status-msg");
+        const matchSummaryText = document.getElementById("match-summary-text");
+        const gameScoreDisplay = document.getElementById("game-score");
+        const gameHitsDisplay = document.getElementById("game-hits");
+        const gameTimerDisplay = document.getElementById("game-timer");
+        const startBtn = document.getElementById("start-match-btn");
+        const quickSimBtn = document.getElementById("quick-sim-btn");
+        const viperScoreTd = document.getElementById("viper-score");
+
+        function spawnTarget() {
+            if (!gameActive) return;
+            if (hitsCount >= totalTargets) {
+                finishMatch(true);
+                return;
+            }
+
+            // Remove existing target if any
+            const existing = arenaBoard.querySelector(".target-orb");
+            if (existing) existing.remove();
+
+            const orb = document.createElement("div");
+            orb.className = "target-orb";
+            orb.textContent = hitsCount + 1;
+
+            const maxX = arenaBoard.clientWidth - 60;
+            const maxY = arenaBoard.clientHeight - 60;
+            const randX = Math.max(10, Math.floor(Math.random() * maxX));
+            const randY = Math.max(10, Math.floor(Math.random() * maxY));
+
+            orb.style.left = randX + "px";
+            orb.style.top = randY + "px";
+
+            orb.addEventListener("click", (e) => {
+                e.stopPropagation();
+                hitsCount++;
+                const hitPoints = 1200 + Math.floor(Math.random() * 400);
+                matchScore += hitPoints;
+                gameScoreDisplay.textContent = matchScore.toLocaleString();
+                gameHitsDisplay.textContent = `${hitsCount}/${totalTargets}`;
+                playBeep(880, 0.08, "sine");
+                orb.remove();
+
+                if (hitsCount < totalTargets) {
+                    spawnTarget();
+                } else {
+                    finishMatch(true);
+                }
+            });
+
+            arenaBoard.appendChild(orb);
+        }
+
+        function startMatch() {
+            gameActive = true;
+            matchScore = 0;
+            hitsCount = 0;
+            gameScoreDisplay.textContent = "0";
+            gameHitsDisplay.textContent = `0/${totalTargets}`;
+            gameTimerDisplay.textContent = "Active";
+            matchOverlay.style.display = "none";
+            playBeep(440, 0.1, "triangle");
+            spawnTarget();
+        }
+
+        function quickBlitz() {
+            matchScore = 15850;
+            hitsCount = 5;
+            gameScoreDisplay.textContent = matchScore.toLocaleString();
+            gameHitsDisplay.textContent = "5/5";
+            finishMatch(true);
+        }
+
+        function finishMatch(won) {
+            gameActive = false;
+            const existing = arenaBoard.querySelector(".target-orb");
+            if (existing) existing.remove();
+
+            matchOverlay.style.display = "flex";
+            if (won) {
+                // Key text element for user customization: "Victory! Match Complete"
+                matchStatusMsg.textContent = "Match Complete: You Win!";
+                matchStatusMsg.style.color = "#10b981";
+                matchSummaryText.textContent = `Score: ${matchScore.toLocaleString()} pts | 100% Accuracy. Leaderboard ready for sync.`;
+                playBeep(659, 0.12, "sine");
+                setTimeout(() => playBeep(880, 0.2, "sine"), 120);
+
+                if (viperScoreTd) {
+                    viperScoreTd.textContent = matchScore.toLocaleString();
+                }
+            } else {
+                matchStatusMsg.textContent = "Match Aborted";
+                matchStatusMsg.style.color = "#ef4444";
+            }
+            startBtn.textContent = "↻ Play Again";
+            gameTimerDisplay.textContent = "Finished";
+        }
+
+        if (startBtn) startBtn.addEventListener("click", startMatch);
+        if (quickSimBtn) quickSimBtn.addEventListener("click", quickBlitz);
+
+        // --- Core Sentinel Automation Handlers ---
+        // 1. Refresh Leaderboard reveals results section (Tested by Playwright test_refresh_leaderboard_and_rank_tier)
         document.addEventListener("click", (e) => {
             const btn = e.target.closest("button");
-            if (btn && btn.id !== "export-btn" && btn.id !== "download-report-btn") {
+            if (btn && btn.id !== "export-btn" && btn.id !== "download-report-btn" && btn.id !== "start-match-btn" && btn.id !== "quick-sim-btn") {
                 const resultsSec = document.getElementById("results-section") || document.getElementById("match-results-wrapper") || document.querySelector(".results-section");
-                if (resultsSec) resultsSec.style.display = "block";
+                if (resultsSec) {
+                    resultsSec.style.display = "block";
+                    playBeep(520, 0.08, "triangle");
+                }
             }
         });
 
+        // 2. Export Match Report handler (Tested by Playwright test_export_match_report)
         document.addEventListener("click", async (e) => {
             const expBtn = e.target.closest("#export-btn") || e.target.closest("#download-report-btn");
             if (expBtn) {
                 const errorDisplay = document.getElementById("error-display");
+                const downloadToast = document.getElementById("download-toast");
                 if (errorDisplay) errorDisplay.style.display = "none";
+                if (downloadToast) downloadToast.style.display = "none";
+
                 try {
                     const res = await fetch("/api/export-pdf", { method: "POST" });
                     if (!res.ok) {
@@ -377,10 +788,46 @@
                     if (!data || !data.pdf_url) {
                         throw new Error("Missing required payload field: pdf_url");
                     }
+
+                    // --- Real Working File Download Generation (CSV/JSON Report) ---
+                    const rankBadgeEl = document.getElementById("rank-badge") || document.getElementById("tier-pill") || document.querySelector(".score-value");
+                    const currentRank = rankBadgeEl ? rankBadgeEl.textContent.trim() : "Top Rank: Elite";
+                    const currentScore = viperScoreTd ? viperScoreTd.textContent.trim() : "14,250";
+                    const timestampStr = new Date().toISOString();
+
+                    const reportCSV = 
+`Sentinel QC Match Performance Report
+======================================
+Generated: ${timestampStr}
+Player Name: Viper_QC
+Match Status: ${matchStatusMsg ? matchStatusMsg.textContent : "Victory"}
+Final Score: ${currentScore}
+Rank Tier: ${currentRank}
+Hits: ${hitsCount}/5
+Accuracy: 100%
+Server Session ID: ${Math.random().toString(36).substring(2, 10).toUpperCase()}
+Verified By: Sentinel Autonomous QC Engine
+`;
+
+                    const blob = new Blob([reportCSV], { type: "text/csv;charset=utf-8;" });
+                    const downloadUrl = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = downloadUrl;
+                    link.setAttribute("download", `Sentinel_Match_Report_Viper_QC_${Date.now()}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(downloadUrl);
+
+                    if (downloadToast) {
+                        downloadToast.style.display = "block";
+                        playBeep(880, 0.15, "sine");
+                    }
                 } catch (err) {
                     if (errorDisplay) {
                         errorDisplay.textContent = "Error exporting report: " + err.message;
                         errorDisplay.style.display = "block";
+                        playBeep(220, 0.25, "sawtooth");
                     }
                 }
             }
