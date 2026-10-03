@@ -684,8 +684,8 @@ Select a drift mode above to simulate real-world UI changes or backend outages i
 
                 if (data.diff && data.diff !== "No code changes made (Safeguard Triggered).") {
                     diffContainer.style.display = "block";
-                    diffOld.textContent = data.diff.split("\n").filter(l => l.startswith("-")).join("\n") || "- Locator changed";
-                    diffNew.textContent = data.diff.split("\n").filter(l => l.startswith("+")).join("\n") || "+ Locator updated";
+                    diffOld.textContent = data.diff.split("\n").filter(l => l.startsWith("-") && !l.startsWith("---")).join("\n") || "- Locator changed";
+                    diffNew.textContent = data.diff.split("\n").filter(l => l.startsWith("+") && !l.startsWith("+++")).join("\n") || "+ Locator updated";
                 } else {
                     diffContainer.style.display = "none";
                 }
