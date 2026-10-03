@@ -10,6 +10,7 @@ from src.generator import generate_test_from_spec
 from src.runner import run_test_suite
 from src.selfHealer import heal_last_run
 from src.ragEngine import ask_question
+from src.liveEditor import apply_live_edit
 
 def set_drift_mode(mode_name):
     mode_clean = mode_name.upper()
@@ -45,6 +46,12 @@ def main():
     drift_parser = subparsers.add_parser("drift", help="Set target app's drift mode")
     drift_parser.add_argument("mode", help="Drift mode state (e.g. NORMAL, SELECTOR_DRIFT, BUG_HTTP_500, etc.)")
 
+    # Command: edit
+    edit_parser = subparsers.add_parser("edit", help="Apply live AI code edit to target app views")
+    edit_parser.add_argument("instruction", help="Plain-English edit instruction (e.g. 'change the win message to say Victory!')")
+    edit_parser.add_argument("--file", help="Specific view file in target-app/views/ to edit (optional)", default=None)
+    edit_parser.add_argument("-y", "--yes", action="store_true", help="Automatically confirm proposed diff without interactive prompt")
+
     # Command: ask
     ask_parser = subparsers.add_parser("ask", help="Query RAG knowledge assistant over specs and logs")
     ask_parser.add_argument("query", nargs="+", help="Natural language question")
@@ -72,6 +79,12 @@ def main():
     elif args.command == "drift":
         print(f"=== [Sentinel] Setting Target App Drift Mode to {args.mode} ===")
         set_drift_mode(args.mode)
+
+    elif args.command == "edit":
+        print("=== [Sentinel] Live AI Code-Edit Command ===")
+        success = apply_live_edit(args.instruction, target_file=args.file, auto_confirm=args.yes)
+        if not success:
+            sys.exit(1)
 
     elif args.command == "ask":
         question = " ".join(args.query)

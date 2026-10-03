@@ -34,3 +34,5 @@
 | 20261001_170144 | COMPOUND_SELECTOR_AND_500 | tests/test_leaderboard.py | 90.0% | FAILED | [edit_log.md](repairs/20261001_170144/edit_log.md) |
 | 20261001_170226 | COMPOUND_COPY_AND_403 | tests/test_leaderboard.py | 80.0% | HUMAN_REVIEW_REQUIRED | [edit_log.md](repairs/20261001_170226/edit_log.md) |
 | 20261001_170249 | COMPOUND_SELECTOR_AND_COPY | tests/test_leaderboard.py | 90.0% | FAILED | [edit_log.md](repairs/20261001_170249/edit_log.md) |
+| 20261003_155959 | ASSERTION_DRIFT | tests/test_leaderboard.py | 90.0% | PASSED | [edit_log.md](repairs/20261003_155959/edit_log.md) |
+| 20261003_173115 | NORMAL | tests/test_leaderboard.py | 90.0% | PASSED | [edit_log.md](repairs/20261003_173115/edit_log.md) |

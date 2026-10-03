@@ -28,10 +28,19 @@ logs/
 # Runtime Artifacts
 artifacts/runs/
 artifacts/repairs/
+artifacts/edits/
 artifacts/*.png
 artifacts/*.json
+artifacts/*.gif
+artifacts/*.webp
 !artifacts/AUDIT_LOG.md
 
 # Node
 node_modules/
 npm-debug.log*
+
+# Local Video Scripts & Presentation Assets (Do not push)
+YOUTUBE_FULL_PROJECT_SCRIPT.md
+DEMO_RECORDING_SCRIPT.md
+*video_script*
+

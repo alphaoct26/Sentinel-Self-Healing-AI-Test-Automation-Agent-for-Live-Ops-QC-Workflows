@@ -176,6 +176,7 @@ sentinel-qc/
 ├── 📁 src/                          # Core engine
 │   ├── cli.py                       # Entry point — all CLI commands
 │   ├── generator.py                 # Plain-English spec → Playwright test
+│   ├── liveEditor.py                # Live AI code-editor for UI changes with unified diff & backups
 │   ├── runner.py                    # Playwright execution + artifact capture
 │   ├── selfHealer.py                # AI diagnosis, patching, rollback logic
 │   └── ragEngine.py                 # In-memory RAG over specs/logs/code
@@ -191,6 +192,7 @@ sentinel-qc/
 │   └── views/index.html             # Leaderboard UI with drift templates
 │
 ├── 📁 artifacts/                    # Audit trail output (auto-generated)
+│   ├── edits/                       # Backups and patch diffs from live edit sessions
 │   ├── repairs/                     # Before/after screenshots + unified diffs
 │   └── AUDIT_LOG.md                 # Unified repair audit index
 │
@@ -275,8 +277,30 @@ python src/cli.py <command> [options]
 | `generate` | Reads `specs/leaderboard_spec.md` → writes `tests/test_leaderboard.py` using LLM |
 | `run` | Executes Playwright tests headlessly, captures DOM snapshots + full-page screenshots |
 | `drift <MODE>` | Activates a specific mutation on the target app (e.g. `SELECTOR_RENAME_BTN`) |
+| `edit "<instruction>"` | **Live AI Code-Editor** — applies unscripted UI modifications to `target-app/views/` with unified diff preview, `[y/N]` confirmation, and automated backup to `artifacts/edits/` |
 | `heal` | AI diagnoses last failure, proposes a patch, live-verifies it, then commits or rolls back |
 | `ask "<query>"` | RAG assistant — ask natural-language questions about the spec, test code, or run logs |
+
+### 🛠️ Live AI Code-Editing (Unscripted Drift Injection)
+
+Want to demo or test Sentinel against unscripted, spontaneous changes rather than pre-set drift modes? Use the `edit` command:
+
+```bash
+# Apply a live cosmetic or locator change in plain English
+python src/cli.py edit "In index.html, change {{RANK_BADGE_TEXT}} to 'Season 1: Grandmaster'"
+
+# Sentinel previews a unified diff in your console:
+# ========================================================================
+# --- a/target-app/views/index.html
+# +++ b/target-app/views/index.html
+# @@ -294,7 +294,7 @@
+# - <div class="score-value" id="{{RANK_BADGE_ID}}">{{RANK_BADGE_TEXT}}</div>
+# + <div class="score-value" id="{{RANK_BADGE_ID}}">Season 1: Grandmaster</div>
+# ========================================================================
+# Apply this change to 'target-app/views/index.html'? [y/N]: y
+```
+- **Safe by Default**: Automatically creates a backup in `artifacts/edits/<timestamp>/`.
+- **Live Proof**: Re-run `python src/cli.py run` → fails against your exact wording → `python src/cli.py heal` diagnoses and adapts your test suite to match.
 
 **Available drift modes:**
 ```

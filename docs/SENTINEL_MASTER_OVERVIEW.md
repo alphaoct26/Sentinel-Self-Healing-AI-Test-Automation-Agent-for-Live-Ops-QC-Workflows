@@ -68,6 +68,7 @@ sentinel-qc/
 ├── artifacts/                   # Output directory for runtime logs and audits
 │   ├── AUDIT_LOG.md             # Master audit trail tracking all AI diagnostic actions
 │   ├── benchmark_results.json   # 23-scenario empirical benchmark execution output
+│   ├── edits/                   # Automated backups and diff patches from live AI edit sessions
 │   ├── repairs/                 # Timestamped folders with diffs, before.png, after.png, edit_log.json
 │   └── runs/                    # Execution logs (run_<timestamp>.json) and failure screenshots
 ├── docs/
@@ -78,9 +79,10 @@ sentinel-qc/
 ├── specs/
 │   └── leaderboard_spec.md      # Plain-English Gherkin-style specification of the target app
 ├── src/
-│   ├── cli.py                   # Central CLI tool: generate, run, heal, drift, ask
+│   ├── cli.py                   # Central CLI tool: generate, run, heal, drift, edit, ask
 │   ├── config.py                # Environment configs, file paths, and AI provider routing
 │   ├── generator.py             # Spec-to-Playwright AI test suite generator
+│   ├── liveEditor.py            # Live AI code editor for UI views with diff preview and backup
 │   ├── ragEngine.py             # RAG knowledge assistant over repository specs and logs
 │   ├── runner.py                # Playwright execution harness, DOM scraper, screenshot capture
 │   └── selfHealer.py            # AI diagnostic engine, safeguard check, and verification loop
@@ -130,20 +132,27 @@ sentinel-qc/
   - `GENUINE_BUG`: Backend crash (500), permission failure (403), timeout, or broken functional workflow.
 - **Verification Gate**: Any candidate patch is written to test code temporarily and **immediately re-tested against the live app**. If the test passes, the patch is accepted and logged; if it fails, it is **instantly rolled back**.
 
-### 4. RAG Knowledge Assistant (`src/ragEngine.py`)
+### 4. Live AI Code Editor (`src/liveEditor.py`)
+- **Function**: Enables ad-hoc, unscripted live modifications to target application views (`target-app/views/`) via plain-English instructions.
+- **AI-Powered Code Mutation**: Passes view code and user instruction to the primary LLM (or heuristic fallback) to produce minimal, surgical HTML changes without affecting unrelated structure or script logic.
+- **Terminal Unified Diff & Confirmation**: Renders a standardized unified diff preview (`difflib.unified_diff`) and strictly requires explicit interactive `[y/N]` confirmation before writing to disk (with optional `-y` bypass).
+- **Automated Pre-Write Backup**: Automatically archives the original file, generated patch, and metadata to `artifacts/edits/<timestamp>/` prior to modifying disk state.
+
+### 5. RAG Knowledge Assistant (`src/ragEngine.py`)
 - **Function**: Natural-language Q&A assistant over the repository.
 - **Data Ingestion**: Parses feature specs (`specs/`), active test code (`tests/`), and execution run history (`artifacts/runs/`).
 - **Query Loop**: Allows engineers to run `python src/cli.py ask "Why did the last run fail?"` or `python src/cli.py ask "What selectors are used in the leaderboard spec?"`.
 
-### 5. Central CLI Interface (`src/cli.py`)
+### 6. Central CLI Interface (`src/cli.py`)
 - Provides unified developer ergonomics:
   - `python src/cli.py generate` $\rightarrow$ Generates tests from spec.
   - `python src/cli.py run` $\rightarrow$ Runs test suite (exits with code 1 on failure for CI).
   - `python src/cli.py heal` $\rightarrow$ Triggers diagnosis, patch verification, or safeguard.
   - `python src/cli.py drift <mode>` $\rightarrow$ Sets target app drift state.
+  - `python src/cli.py edit "<instruction>"` $\rightarrow$ Applies live AI code modification with diff confirmation.
   - `python src/cli.py ask "<query>"` $\rightarrow$ Queries RAG assistant.
 
-### 6. Target Application Server (`target-app/server.py`)
+### 7. Target Application Server (`target-app/server.py`)
 - Python multi-threaded HTTP server running on port `3001`.
 - Exposes REST endpoints:
   - `GET /`: Renders `views/index.html` with dynamic template substitutions based on active mutation.
@@ -283,11 +292,16 @@ python src/cli.py drift BUG_HTTP_403_FORBIDDEN
 python src/cli.py heal
 # Analyzes last failed run, checks safeguard, applies verified patch or escalates
 
-# 5. Natural Language RAG Assistant
+# 5. Live AI Code Editor (Unscripted Drift Injection)
+python src/cli.py edit "In index.html, change {{RANK_BADGE_TEXT}} to 'Season 1: Grandmaster'"
+# Interactively previews unified diff, requests [y/N] confirmation, backs up to artifacts/edits/
+# Optional: --file <view-file>, -y (auto-confirm)
+
+# 6. Natural Language RAG Assistant
 python src/cli.py ask "What happened during the last failed test run?"
 python src/cli.py ask "Which selectors are validated in the leaderboard spec?"
 
-# 6. Execute Full 23-Scenario Mutation Benchmark
+# 7. Execute Full 23-Scenario Mutation Benchmark
 python scripts/benchmark_runner.py
 # Runs end-to-end benchmark across all 23 scenarios and outputs metrics
 ```
@@ -330,7 +344,8 @@ Use this slide outline to create a high-impact presentation deck for management,
 
 ### Slide 7: Live Target App & Demo Walkthrough
 - Showcase `target-app/views/dashboard.html` with real-time drift toggles and visual repair before/after diffs.
-- Showcase `artifacts/AUDIT_LOG.md` master traceability index.
+- Demonstrate unscripted live mutations via `python src/cli.py edit` — proving Sentinel heals real, spontaneous code changes (not just pre-scripted modes).
+- Showcase `artifacts/AUDIT_LOG.md` master traceability index and automated backups in `artifacts/edits/`.
 
 ### Slide 8: CI/CD Integration & Enterprise Readiness
 - GitHub Actions workflow (`.github/workflows/test.yml`) running on push and PR.
