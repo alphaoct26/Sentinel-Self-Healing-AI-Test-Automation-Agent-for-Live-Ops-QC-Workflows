@@ -122,50 +122,6 @@
             border: 1px solid #334155;
         }
 
-        /* Drift selector box */
-        .drift-selector-box {
-            background: rgba(15, 23, 42, 0.7);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 14px 16px;
-            margin-bottom: 20px;
-        }
-
-        .drift-selector-box label {
-            display: block;
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #38bdf8;
-            margin-bottom: 6px;
-        }
-
-        select.drift-select {
-            width: 100%;
-            padding: 10px 12px;
-            background: #131c2e;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: var(--text);
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        select.drift-select:focus {
-            border-color: var(--primary);
-        }
-
-        .drift-description {
-            margin-top: 8px;
-            font-size: 12px;
-            color: #94a3b8;
-            font-style: italic;
-        }
-
         /* Interactive Cyber Game Arena */
         .game-arena-card {
             background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
@@ -493,17 +449,6 @@
             <div class="drift-badge" id="drift-mode-indicator">Mode: {{DRIFT_MODE}}</div>
         </div>
 
-        <!-- Simulated UI Drift Selector -->
-        <div class="drift-selector-box">
-            <label for="drift-selector">Simulated UI Mutation Mode:</label>
-            <select id="drift-selector" class="drift-select">
-                <option value="NORMAL">Normal Mode (Stable UI &amp; API)</option>
-                <option value="SELECTOR_DRIFT">Selector Drift (Renamed Button ID)</option>
-                <option value="ASSERTION_DRIFT">Assertion Drift (Changed Copy Wording)</option>
-                <option value="REAL_BUG">Real Bug (HTTP 500 Endpoint Error)</option>
-            </select>
-            <div class="drift-description" id="drift-desc"></div>
-        </div>
 
         <!-- Real Playable Mini-Game Arena -->
         <div class="game-arena-card">
@@ -579,48 +524,10 @@
     </div>
 
     <script>
-        // --- Drift Mode Descriptions ---
-        const driftDescriptions = {
-            "NORMAL": "Simulates stable UI locators (#refresh-btn), tier labels, and backend responses.",
-            "SELECTOR_DRIFT": "Renames Refresh button ID from #refresh-btn to #reload-leaderboard-btn.",
-            "ASSERTION_DRIFT": "Changes rank badge label from 'Top Rank: Elite' to 'Current Tier: Elite'.",
-            "REAL_BUG": "Causes the match report export API endpoint (/api/export-pdf) to return HTTP 500 error."
-        };
-
-        const driftSelector = document.getElementById("drift-selector");
-        const driftDesc = document.getElementById("drift-desc");
+        // --- Drift Mode Indicator ---
         const driftBadge = document.getElementById("drift-mode-indicator");
-
-        function updateUIDriftState(mode) {
-            if (driftSelector) driftSelector.value = mode;
-            if (driftBadge) driftBadge.textContent = "Mode: " + mode;
-            if (driftDesc) driftDesc.textContent = driftDescriptions[mode] || ("Active Mutation Scenario: " + mode);
-        }
-
-        const initialMode = "{{DRIFT_MODE}}".includes("{{") ? "NORMAL" : "{{DRIFT_MODE}}";
-        updateUIDriftState(initialMode);
-
-        if (driftSelector) {
-            driftSelector.addEventListener("change", async (e) => {
-                const selectedMode = e.target.value;
-                updateUIDriftState(selectedMode);
-                try {
-                    await fetch("/api/drift-mode", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ mode: selectedMode })
-                    });
-                    await fetch("/api/drift", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ mode: selectedMode })
-                    });
-                    window.location.reload();
-                } catch (err) {
-                    console.log("Drift mode API update:", err.message);
-                }
-            });
-        }
+        const currentMode = "{{DRIFT_MODE}}".includes("{{") ? "NORMAL" : "{{DRIFT_MODE}}";
+        if (driftBadge) driftBadge.textContent = "Mode: " + currentMode;
 
         // --- Sound Effects via Web Audio API (Synthesizer, No External Assets) ---
         const audioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
