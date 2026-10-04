@@ -396,6 +396,36 @@
             from { opacity: 0; transform: translateY(-4px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        /* Personalized Drift Preset Chips */
+        .chip-btn {
+            padding: 6px 12px;
+            background: var(--card-inner);
+            border: 1px solid var(--panel-border);
+            color: var(--text-muted);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .chip-btn:hover {
+            border-color: var(--accent-purple);
+            color: #c4b5fd;
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        details summary {
+            list-style: none;
+        }
+        details summary::-webkit-details-marker {
+            display: none;
+        }
+        details[open] summary {
+            color: var(--accent-cyan);
+        }
     </style>
 </head>
 <body>
@@ -427,10 +457,10 @@
             </div>
         </div>
 
-        <!-- Panel 2: Drift Control Panel -->
+        <!-- Panel 2: Personalized Drift — Live AI Edit -->
         <div class="panel">
             <div class="panel-header">
-                <div class="panel-title"><span class="num">2</span> Simulate UI & Backend Drift</div>
+                <div class="panel-title"><span class="num">2</span> Personalized Drift — Apply Real Changes</div>
                 <span id="current-drift-badge" class="badge-live" style="background:#1e293b; color:var(--accent-cyan); border-color:var(--panel-border);">Mode: NORMAL</span>
             </div>
 
@@ -439,28 +469,76 @@
                 <span style="cursor:pointer;" onclick="document.getElementById('toast-banner').style.display='none'">✕</span>
             </div>
 
-            <div class="btn-group">
-                <button class="btn-drift active" id="btn-mode-normal" onclick="setDriftMode('NORMAL')">
-                    🟢 NORMAL MODE
-                    <span class="sub">Stable UI & working PDF export</span>
-                </button>
-                <button class="btn-drift" id="btn-mode-selector" onclick="setDriftMode('SELECTOR_DRIFT')">
-                    🔵 SELECTOR DRIFT
-                    <span class="sub">Renames #refresh-btn to #reload-leaderboard-btn</span>
-                </button>
-                <button class="btn-drift" id="btn-mode-assertion" onclick="setDriftMode('ASSERTION_DRIFT')">
-                    🟡 ASSERTION DRIFT
-                    <span class="sub">Changes badge text to "Current Tier: Elite"</span>
-                </button>
-                <button class="btn-drift" id="btn-mode-bug" onclick="setDriftMode('REAL_BUG')">
-                    🔴 REAL BUG
-                    <span class="sub">Export PDF endpoint returns HTTP 500 error</span>
-                </button>
+            <!-- Custom Instruction Input -->
+            <div style="margin-bottom:12px;">
+                <label style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); font-weight:700; display:block; margin-bottom:6px;">
+                    Type Your Own Change (Plain English)
+                </label>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="custom-edit-input" placeholder='e.g. "Change win message to Victory! Game Over"' style="
+                        flex:1; padding:12px 16px; background:var(--card-inner); border:1px solid var(--panel-border);
+                        border-radius:8px; color:var(--text-main); font-size:14px; font-family:inherit;
+                        outline:none; transition:border-color 0.2s;
+                    " onfocus="this.style.borderColor='var(--accent-cyan)'" onblur="this.style.borderColor='var(--panel-border)'" />
+                    <button id="btn-apply-edit" onclick="applyCustomEdit()" style="
+                        padding:12px 20px; background:linear-gradient(135deg, #7c3aed, #6d28d9);
+                        color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:700;
+                        cursor:pointer; white-space:nowrap; transition:all 0.2s;
+                        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+                    ">
+                        ✏️ Apply Edit
+                    </button>
+                </div>
             </div>
 
-            <div class="code-box" id="drift-mode-info" style="font-size:12px; color:var(--text-muted);">
-Select a drift mode above to simulate real-world UI changes or backend outages in live ops.
+            <!-- Preset Suggestion Chips -->
+            <div style="margin-bottom:14px;">
+                <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.6px; color:var(--text-muted); font-weight:700; margin-bottom:8px;">
+                    Quick Preset Suggestions — Click to Apply
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:6px;" id="preset-chips">
+                    <button class="chip-btn" onclick="fillAndApply('Change the rank badge to say Diamond Legend')">🏆 Rank → "Diamond Legend"</button>
+                    <button class="chip-btn" onclick="fillAndApply('Change the win message to say Victory! Game Over')">🎮 Win Msg → "Victory!"</button>
+                    <button class="chip-btn" onclick="fillAndApply('Rename the Refresh Leaderboard button text to Sync Match Data')">🔄 Btn → "Sync Match Data"</button>
+                    <button class="chip-btn" onclick="fillAndApply('Change the page title from Cyber Arena: Match Standings to eSports Live Dashboard')">📝 Title → "eSports Live"</button>
+                    <button class="chip-btn" onclick="fillAndApply('Change Season 4 to Season 7 in the subtitle')">📅 Season 4 → 7</button>
+                    <button class="chip-btn" onclick="fillAndApply('Change the player name Viper_QC to Phoenix_Pro')">👤 Player → "Phoenix_Pro"</button>
+                </div>
             </div>
+
+            <!-- Live Edit Result -->
+            <div id="edit-result-container" class="status-card" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span id="edit-status-badge" class="status-badge status-pass">APPLIED</span>
+                    <span id="edit-instruction-text" style="font-size:12px; color:var(--text-muted); max-width:60%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+                </div>
+                <div id="edit-output-box" class="code-box" style="color:#e2e8f0; font-size:12px; max-height:120px; overflow-y:auto;"></div>
+            </div>
+
+            <!-- Collapsed Simulated Drift Buttons -->
+            <details style="margin-top:8px;">
+                <summary style="font-size:11px; text-transform:uppercase; letter-spacing:0.6px; color:var(--text-muted); cursor:pointer; font-weight:700; padding:8px 0;">
+                    ▸ Quick Simulation Presets (Template Drift Modes)
+                </summary>
+                <div class="btn-group" style="margin-top:8px;">
+                    <button class="btn-drift active" id="btn-mode-normal" onclick="setDriftMode('NORMAL')">
+                        🟢 NORMAL MODE
+                        <span class="sub">Stable UI & working PDF export</span>
+                    </button>
+                    <button class="btn-drift" id="btn-mode-selector" onclick="setDriftMode('SELECTOR_DRIFT')">
+                        🔵 SELECTOR DRIFT
+                        <span class="sub">Renames #refresh-btn to #reload-leaderboard-btn</span>
+                    </button>
+                    <button class="btn-drift" id="btn-mode-assertion" onclick="setDriftMode('ASSERTION_DRIFT')">
+                        🟡 ASSERTION DRIFT
+                        <span class="sub">Changes badge text to "Current Tier: Elite"</span>
+                    </button>
+                    <button class="btn-drift" id="btn-mode-bug" onclick="setDriftMode('REAL_BUG')">
+                        🔴 REAL BUG
+                        <span class="sub">Export PDF endpoint returns HTTP 500 error</span>
+                    </button>
+                </div>
+            </details>
         </div>
 
         <!-- Panel 3: Run Test Panel -->
@@ -557,6 +635,86 @@ Select a drift mode above to simulate real-world UI changes or backend outages i
 
     <script>
         let currentDriftMode = "NORMAL";
+
+        // --- Personalized Drift: Live AI Edit Functions ---
+        async function applyCustomEdit() {
+            const input = document.getElementById("custom-edit-input");
+            const instruction = input.value.trim();
+            if (!instruction) {
+                input.style.borderColor = "var(--accent-red)";
+                input.placeholder = "Please type an instruction first...";
+                setTimeout(() => { input.style.borderColor = "var(--panel-border)"; input.placeholder = 'e.g. "Change win message to Victory! Game Over"'; }, 2000);
+                return;
+            }
+
+            const btn = document.getElementById("btn-apply-edit");
+            const resultBox = document.getElementById("edit-result-container");
+            const statusBadge = document.getElementById("edit-status-badge");
+            const instrText = document.getElementById("edit-instruction-text");
+            const outputBox = document.getElementById("edit-output-box");
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;"></div> Applying...';
+            resultBox.style.display = "none";
+
+            try {
+                const res = await fetch("/api/live-edit", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ instruction: instruction })
+                });
+                const data = await res.json();
+
+                resultBox.style.display = "flex";
+                instrText.textContent = instruction;
+
+                if (data.applied) {
+                    statusBadge.className = "status-badge status-pass";
+                    statusBadge.textContent = "EDIT APPLIED";
+                    outputBox.textContent = data.stdout || "Edit applied successfully to target-app/views/index.html";
+
+                    // Update drift badge to show custom mode
+                    document.getElementById("current-drift-badge").textContent = "Mode: CUSTOM_EDIT";
+                    currentDriftMode = "CUSTOM_EDIT";
+
+                    // Show toast
+                    const toast = document.getElementById("toast-banner");
+                    document.getElementById("toast-text").textContent = `Edit applied: "${instruction}" — Game updated live!`;
+                    toast.style.display = "flex";
+                    setTimeout(() => { toast.style.display = "none"; }, 5000);
+
+                    // Reload iframe to show the change
+                    reloadPreview();
+                } else {
+                    statusBadge.className = "status-badge status-amber";
+                    statusBadge.textContent = "EDIT FAILED";
+                    outputBox.textContent = data.stdout || data.error || "Edit could not be applied.";
+                }
+            } catch (err) {
+                resultBox.style.display = "flex";
+                statusBadge.className = "status-badge status-fail";
+                statusBadge.textContent = "ERROR";
+                outputBox.textContent = "Failed to apply edit: " + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '✏️ Apply Edit';
+            }
+        }
+
+        function fillAndApply(instruction) {
+            document.getElementById("custom-edit-input").value = instruction;
+            applyCustomEdit();
+        }
+
+        // Allow Enter key to submit
+        document.addEventListener("DOMContentLoaded", () => {
+            const input = document.getElementById("custom-edit-input");
+            if (input) {
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") applyCustomEdit();
+                });
+            }
+        });
 
         function reloadPreview() {
             const iframe = document.getElementById("app-preview-iframe");

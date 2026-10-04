@@ -39,3 +39,7 @@
 | 20261003_175313 | SELECTOR_DRIFT | tests/test_leaderboard.py | 90.0% | PASSED | [edit_log.md](repairs/20261003_175313/edit_log.md) |
 | 20261003_175529 | REAL_BUG | tests/test_leaderboard.py | 80.0% | FAILED | [edit_log.md](repairs/20261003_175529/edit_log.md) |
 | 20261003_180033 | NORMAL | tests/test_leaderboard.py | 80.0% | PASSED | [edit_log.md](repairs/20261003_180033/edit_log.md) |
+| 20261003_181408 | ASSERTION_DRIFT | tests/test_leaderboard.py | 90.0% | PASSED | [edit_log.md](repairs/20261003_181408/edit_log.md) |
+| 20261003_181932 | SELECTOR_DRIFT | tests/test_leaderboard.py | 80.0% | PASSED | [edit_log.md](repairs/20261003_181932/edit_log.md) |
+| 20261003_182145 | ASSERTION_DRIFT | tests/test_leaderboard.py | 80.0% | FAILED | [edit_log.md](repairs/20261003_182145/edit_log.md) |
+| 20261004_113223 | NORMAL | tests/test_leaderboard.py | 80.0% | PASSED | [edit_log.md](repairs/20261004_113223/edit_log.md) |

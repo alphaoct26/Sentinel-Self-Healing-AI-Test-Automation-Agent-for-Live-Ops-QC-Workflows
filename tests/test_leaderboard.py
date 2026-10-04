@@ -47,7 +47,3 @@ def test_export_match_report():
         expect(error_display).not_to_be_visible()
 
         browser.close()
-
-if __name__ == "__main__":
-    test_refresh_leaderboard_and_rank_tier()
-    test_export_match_report()

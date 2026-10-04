@@ -34,13 +34,25 @@ EDITS_DIR = ARTIFACTS_DIR / "edits"
 EDITS_DIR.mkdir(parents=True, exist_ok=True)
 
 LIVE_EDIT_PROMPT = """You are Sentinel's Live AI Code Editor for the target web application.
-Your task is to apply a precise, minimal edit to the target HTML/view file based on the user's plain-English instruction.
+Your task is to identify the EXACT snippet in the target HTML file that needs to be modified based on the user's plain-English instruction.
 
-STRICT REQUIREMENTS:
-1. Make ONLY the minimal change requested. Do NOT refactor, reformat, reorder, or touch any other part of the file.
-2. Preserve all existing HTML elements, attributes, IDs, inline styles, script tags, and template variables (e.g. {{DRIFT_MODE}}, {{REFRESH_BTN_ID}}, {{RESULTS_SECTION_ID}}, {{RANK_BADGE_ID}}, {{EXPORT_BTN_ID}}, {{RANK_BADGE_TEXT}}) UNLESS the user explicitly asks to modify that specific element or text.
-3. Return the COMPLETE, valid, updated file content from the very first line to the very last line.
-4. Return ONLY the raw file content — absolutely NO markdown code fences (do NOT include ```html or ```), NO conversational commentary, and NO explanations.
+CRITICAL INSTRUCTIONS:
+1. Return ONLY a valid JSON object or JSON array with "find" and "replace" keys:
+{
+  "find": "exact unique text or HTML snippet in the file to be replaced",
+  "replace": "new text or HTML snippet to replace it with"
+}
+
+Or if multiple replacements are required:
+[
+  { "find": "exact text 1", "replace": "new text 1" },
+  { "find": "exact text 2", "replace": "new text 2" }
+]
+
+CRITICAL RULES:
+1. "find" MUST match existing characters in the file EXACTLY (case-sensitive verbatim match).
+2. Keep "find" concise (just the tag, attribute, or string that needs changing).
+3. Do NOT include markdown fences, commentary, or conversational text. Return ONLY the raw JSON.
 """
 
 def resolve_target_file(instruction: str, explicit_file: str = None) -> Path:
@@ -116,11 +128,11 @@ def clean_llm_response(raw_text: str) -> str:
     Strips accidental markdown code block fences or leading/trailing comments.
     """
     cleaned = raw_text.strip()
-    match = re.search(r"^```(?:html)?\s*\n(.*?)\n```$", cleaned, re.DOTALL)
+    match = re.search(r"^```(?:html|json)?\s*\n(.*?)\n```$", cleaned, re.DOTALL)
     if match:
-        return match.group(1)
+        return match.group(1).strip()
     
-    if cleaned.startswith("```html"):
+    if cleaned.startswith("```html") or cleaned.startswith("```json"):
         cleaned = cleaned[7:].strip()
     elif cleaned.startswith("```"):
         cleaned = cleaned[3:].strip()
@@ -132,30 +144,108 @@ def clean_llm_response(raw_text: str) -> str:
 
 def fallback_heuristic_edit(content: str, instruction: str) -> str:
     """
-    Rule-based regex fallback if AI API is unreachable.
-    Handles standard patterns like 'change "old" to "new"' or 'rename "old" to "new"'.
+    Rule-based smart fallback for plain-English instructions.
+    Handles phrases like 'Change the player name Viper_QC to vaibhav',
+    'Set rank to Diamond Legend', 'Btn -> "Sync Match Data"', etc.
     """
-    patterns = [
-        r'(?:change|replace|update|set)\s+[\'"]?([^\'"]+?)[\'"]?\s+(?:to|with|into)\s+[\'"]?([^\'"]+?)[\'"]?$',
-        r'(?:rename)\s+[\'"]?([^\'"]+?)[\'"]?\s+(?:to)\s+[\'"]?([^\'"]+?)[\'"]?$',
-        r'say\s+[\'"]([^\'"]+)[\'"]\s+instead\s+of\s+[\'"]([^\'"]+)[\'"]'
-    ]
+    clean_inst = instruction.strip()
+    inst_lower = clean_inst.lower()
 
-    for pat in patterns:
-        m = re.search(pat, instruction, re.IGNORECASE)
-        if m:
-            if "say" in pat and "instead of" in pat:
-                new_str, old_str = m.group(1), m.group(2)
-            else:
-                old_str, new_str = m.group(1), m.group(2)
+    # Preset 1: Player name replacement (e.g. "Change the player name Viper_QC to vaibhav" or "Player -> 'Phoenix_Pro'")
+    if ("player" in inst_lower or "viper" in inst_lower) and ("to" in inst_lower or "->" in inst_lower or "=>" in inst_lower):
+        parts = re.split(r"\bto\b|->|=>", clean_inst, flags=re.IGNORECASE)
+        if len(parts) >= 2:
+            new_name = parts[-1].strip(" '\"`")
+            for current_player in ["Viper_QC", "vaibhav", "Phoenix_Pro"]:
+                if current_player in content:
+                    print(f"[LiveEditor Fallback] Player name update: '{current_player}' -> '{new_name}'")
+                    return content.replace(current_player, new_name)
 
-            # Strip leading/trailing quote artifacts if captured
-            old_str = old_str.strip("'\"")
-            new_str = new_str.strip("'\"")
+    # Preset 2: Rank badge update (e.g. "Rank -> 'Diamond Legend'" or "Change rank to Diamond Legend")
+    if any(k in inst_lower for k in ["rank", "tier", "badge", "diamond"]):
+        parts = re.split(r"\bto\b|->|=>", clean_inst, flags=re.IGNORECASE)
+        if len(parts) >= 2:
+            new_rank = parts[-1].strip(" '\"`")
+            for current_rank in ["Top Rank: Elite", "Diamond Legend", "Grandmaster", "Bronze Tier"]:
+                if current_rank in content:
+                    print(f"[LiveEditor Fallback] Rank tier update: '{current_rank}' -> '{new_rank}'")
+                    return content.replace(current_rank, new_rank)
 
-            if old_str in content:
-                print(f"[LiveEditor Fallback] Replacing '{old_str}' with '{new_str}'")
-                return content.replace(old_str, new_str, 1)
+    # Preset 3: Win message update (e.g. "Win Msg -> 'Victory!'" or "Change win message to Victory!")
+    if any(k in inst_lower for k in ["win msg", "win message", "victory", "match complete"]):
+        parts = re.split(r"\bto\b|->|=>", clean_inst, flags=re.IGNORECASE)
+        if len(parts) >= 2:
+            new_msg = parts[-1].strip(" '\"`")
+            for current_msg in ["Match Complete: You Win!", "Victory!", "Match Complete", "Mission Accomplished"]:
+                if current_msg in content:
+                    print(f"[LiveEditor Fallback] Win message update: '{current_msg}' -> '{new_msg}'")
+                    return content.replace(current_msg, new_msg)
+
+    # Preset 4: Button text update (e.g. "Btn -> 'Sync Match Data'")
+    if any(k in inst_lower for k in ["btn", "button", "refresh", "sync"]):
+        parts = re.split(r"\bto\b|->|=>", clean_inst, flags=re.IGNORECASE)
+        if len(parts) >= 2:
+            new_btn = parts[-1].strip(" '\"`")
+            for current_btn in ["Refresh Leaderboard", "Sync Match Data", "Reload Table"]:
+                if current_btn in content:
+                    print(f"[LiveEditor Fallback] Button text update: '{current_btn}' -> '{new_btn}'")
+                    return content.replace(current_btn, new_btn)
+
+    # Preset 5: Title update (e.g. "Title -> 'eSports Live'")
+    if any(k in inst_lower for k in ["title", "esports", "standings"]):
+        parts = re.split(r"\bto\b|->|=>", clean_inst, flags=re.IGNORECASE)
+        if len(parts) >= 2:
+            new_title = parts[-1].strip(" '\"`")
+            for current_title in ["Cyber Arena: Match Standings", "eSports Live", "Global Standings"]:
+                if current_title in content:
+                    print(f"[LiveEditor Fallback] Title update: '{current_title}' -> '{new_title}'")
+                    return content.replace(current_title, new_title)
+
+    # Preset 6: Season update (e.g. "Season 4 -> 7")
+    if "season" in inst_lower:
+        parts = re.split(r"\bto\b|->|=>", clean_inst, flags=re.IGNORECASE)
+        if len(parts) >= 2:
+            new_val = parts[-1].strip(" '\"`")
+            new_season = f"Season {new_val}" if not new_val.lower().startswith("season") else new_val
+            for s in ["Season 4", "Season 7", "Season 1", "Season 2", "Season 3"]:
+                if s in content:
+                    print(f"[LiveEditor Fallback] Season update: '{s}' -> '{new_season}'")
+                    return content.replace(s, new_season)
+
+    # General split on ' to ', ' with ', ' into ', ' -> ', ' => '
+    parts = re.split(r"\bto\b|\bwith\b|\binto\b|->|=>", clean_inst, flags=re.IGNORECASE)
+    if len(parts) >= 2:
+        left_part = parts[0].strip()
+        new_str = parts[1].strip(" '\"`")
+
+        # Strip prefixes like "change", "replace", "rename", "set", "the", etc.
+        noise = ["change the", "replace the", "update the", "rename the", "set the", "change", "replace", "update", "rename", "set", "say"]
+        for n in noise:
+            if left_part.lower().startswith(n + " "):
+                left_part = left_part[len(n)+1:].strip()
+
+        # Further strip qualifiers
+        qualifiers = [
+            "player name", "player", "button selector", "button id", "button text", "button",
+            "rank tier", "rank badge", "rank", "text", "message", "msg", "element"
+        ]
+        for q in qualifiers:
+            if left_part.lower().startswith(q + " "):
+                left_part = left_part[len(q)+1:].strip()
+
+        old_str = left_part.strip(" '\"`")
+
+        # Direct string replacement
+        if old_str and old_str in content:
+            print(f"[LiveEditor Fallback] Direct replacement: '{old_str}' -> '{new_str}'")
+            return content.replace(old_str, new_str)
+
+        # Check individual words in old_str to see if any exist in content
+        for word in old_str.split():
+            w_clean = word.strip(" '\"`,;:")
+            if len(w_clean) >= 3 and w_clean in content:
+                print(f"[LiveEditor Fallback] Word token replacement: '{w_clean}' -> '{new_str}'")
+                return content.replace(w_clean, new_str)
 
     return content
 
@@ -163,7 +253,7 @@ def apply_live_edit(instruction: str, target_file: str = None, auto_confirm: boo
     """
     Executes a live AI code-edit on a view file:
     1. Resolves target view.
-    2. Sends instruction + current content to LLM.
+    2. Sends instruction + current content to LLM to produce targeted find/replace JSON.
     3. Computes unified diff.
     4. Prompts for explicit [y/N] confirmation.
     5. Backs up original file to artifacts/edits/<timestamp>/.
@@ -197,18 +287,41 @@ def apply_live_edit(instruction: str, target_file: str = None, auto_confirm: boo
                     }
                 ],
                 temperature=0.1,
+                max_tokens=1000,
                 timeout=60
             )
-            raw_response = response.choices[0].message.content
-            proposed_content = clean_llm_response(raw_response)
+            raw_response = response.choices[0].message.content.strip()
+
+            # Attempt parsing JSON find/replace
+            try:
+                json_match = re.search(r"(\[.*\]|\{.*\})", raw_response, re.DOTALL)
+                if json_match:
+                    data = json.loads(json_match.group(1))
+                    if isinstance(data, dict):
+                        data = [data]
+                    if isinstance(data, list):
+                        temp_content = current_content
+                        replaced_count = 0
+                        for item in data:
+                            f_str = item.get("find", "")
+                            r_str = item.get("replace", "")
+                            if f_str and f_str in temp_content:
+                                temp_content = temp_content.replace(f_str, r_str)
+                                replaced_count += 1
+                                print(f"[LiveEditor AI] Replaced '{f_str[:40]}' with '{r_str[:40]}'")
+                        if replaced_count > 0:
+                            proposed_content = temp_content
+            except Exception:
+                pass
+
+            # Fallback check if AI returned full HTML
+            if not proposed_content:
+                cleaned = clean_llm_response(raw_response)
+                if (cleaned.startswith("<!DOCTYPE") or "<html" in cleaned[:200]) and len(cleaned) >= len(current_content) * 0.8:
+                    proposed_content = cleaned
+
         except Exception as e:
             print(f"[LiveEditor Warning] {AI_PROVIDER} API call failed ({e}). Attempting fallback edit...")
-
-    # Safeguard against accidental truncation from token limits
-    if proposed_content and len(proposed_content) < len(current_content) * 0.7:
-        if "delete" not in instruction.lower() and "remove" not in instruction.lower():
-            print("[LiveEditor Warning] AI proposed unusually truncated content. Falling back to targeted replacement...")
-            proposed_content = fallback_heuristic_edit(current_content, instruction)
 
     if not proposed_content or proposed_content == current_content:
         proposed_content = fallback_heuristic_edit(current_content, instruction)

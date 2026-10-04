@@ -347,16 +347,19 @@
 
         .action-btn {
             width: 100%;
-            padding: 12px;
+            padding: 12px 18px;
             background: var(--primary);
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 14px;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.2s;
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .action-btn:hover {
@@ -364,11 +367,148 @@
             transform: translateY(-1px);
         }
 
+        .dom-tag {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: #93c5fd;
+            padding: 3px 8px;
+            border-radius: 5px;
+            letter-spacing: 0.3px;
+        }
+
+        .export-btn .dom-tag {
+            color: #a7f3d0;
+            border-color: rgba(52, 211, 153, 0.25);
+        }
+
+        /* Live QC Telemetry HUD */
+        .telemetry-hud-card {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid #1e293b;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 20px;
+        }
+
+        .hud-col {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .hud-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: #64748b;
+            font-weight: 700;
+        }
+
+        .hud-value {
+            font-size: 13px;
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+
+        .hud-accent {
+            color: #38bdf8;
+        }
+
+        .hud-tier {
+            color: #10b981;
+            text-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+        }
+
+        .hud-code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 11px;
+            color: #a78bfa;
+            background: rgba(139, 92, 246, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            width: fit-content;
+        }
+
+        /* Match Banner Strip in Arena */
+        .arena-match-banner-strip {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            font-size: 12px;
+        }
+
+        .strip-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .strip-label {
+            color: #94a3b8;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .strip-tier-preview {
+            color: #10b981;
+            font-weight: 700;
+        }
+
+        /* Results Section - Default Visible for Live Clarity */
         .results-section {
             margin-top: 24px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border);
-            display: none;
+            padding: 18px;
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            display: block; /* Visible by default so cosmetic & drift changes are instantly apparent */
+            transition: all 0.3s ease;
+        }
+
+        .section-badge-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .hud-pill {
+            font-size: 11px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            color: #94a3b8;
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .hud-pill.status-active {
+            color: #10b981;
+            border-color: rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.08);
+            font-weight: 600;
+        }
+
+        .pulse-highlight {
+            animation: pulseGlow 0.6s ease-out;
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6); }
+            70% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
         }
 
         .score-box {
@@ -449,6 +589,25 @@
             <div class="drift-badge" id="drift-mode-indicator">Mode: {{DRIFT_MODE}}</div>
         </div>
 
+        <!-- Live QC Drift & DOM Telemetry HUD -->
+        <div class="telemetry-hud-card">
+            <div class="hud-col">
+                <span class="hud-label">Active Drift Mode</span>
+                <span class="hud-value hud-accent" id="telemetry-drift-mode">{{DRIFT_MODE}}</span>
+            </div>
+            <div class="hud-col">
+                <span class="hud-label">Verified Tier Badge</span>
+                <span class="hud-value hud-tier">{{RANK_BADGE_TEXT}}</span>
+            </div>
+            <div class="hud-col">
+                <span class="hud-label">Button Selector</span>
+                <span class="hud-value hud-code">#{{REFRESH_BTN_ID}}</span>
+            </div>
+            <div class="hud-col">
+                <span class="hud-label">Results Container</span>
+                <span class="hud-value hud-code">#{{RESULTS_SECTION_ID}}</span>
+            </div>
+        </div>
 
         <!-- Real Playable Mini-Game Arena -->
         <div class="game-arena-card">
@@ -461,12 +620,24 @@
                 </div>
             </div>
 
+            <!-- Arena Live Match Banner Strip -->
+            <div class="arena-match-banner-strip">
+                <div class="strip-item">
+                    <span class="strip-label">Match Win Banner:</span>
+                    <strong id="match-status-msg" class="match-win-banner">Match Complete: You Win!</strong>
+                </div>
+                <div class="strip-item">
+                    <span class="strip-label">Verified Standing:</span>
+                    <span class="strip-tier-preview">{{RANK_BADGE_TEXT}}</span>
+                </div>
+            </div>
+
             <div class="arena-canvas" id="arena-board">
                 <div class="arena-grid-overlay"></div>
                 
                 <!-- Start / Outcome Overlay Screen -->
                 <div class="match-overlay-screen" id="match-overlay">
-                    <div id="match-status-msg" class="match-win-banner">Ready for Match</div>
+                    <div id="match-overlay-msg" class="match-win-banner">Match Complete: You Win!</div>
                     <div id="match-summary-text" class="match-score-summary">Click targets as fast as possible to climb the live leaderboard.</div>
                     <div>
                         <button id="start-match-btn" class="arena-btn arena-btn-primary" type="button">▶ Start Aim Match</button>
@@ -492,7 +663,7 @@
                 </tr>
             </thead>
             <tbody id="leaderboard-tbody">
-                <tr id="player-row-1"><td>#1</td><td>Viper_QC (You)</td><td id="viper-score">14,250</td><td><span class="badge-online">Online</span></td></tr>
+                <tr id="player-row-1"><td>#1</td><td>vaibhav (You)</td><td id="viper-score">14,250</td><td><span class="badge-online">Online</span></td></tr>
                 <tr><td>#2</td><td>Ghost_Agent</td><td>12,890</td><td><span class="badge-online">Online</span></td></tr>
                 <tr><td>#3</td><td>Shadow_Ninja</td><td>11,400</td><td><span class="badge-inmatch">In-Match</span></td></tr>
                 <tr><td>#4</td><td>Apex_Predator</td><td>9,750</td><td><span class="badge-online">Online</span></td></tr>
@@ -501,12 +672,19 @@
         </table>
 
         <!-- Playwright Target: Refresh Leaderboard Button -->
-        <button id="{{REFRESH_BTN_ID}}" class="action-btn">Refresh Leaderboard</button>
+        <button id="{{REFRESH_BTN_ID}}" class="action-btn">
+            <span>🔄 Refresh Leaderboard</span>
+            <span class="dom-tag">id="#{{REFRESH_BTN_ID}}"</span>
+        </button>
 
         <!-- Playwright Target: Results Section & Rank Badge -->
         <div class="results-section" id="{{RESULTS_SECTION_ID}}">
+            <div class="section-badge-header">
+                <span class="hud-pill">Target DOM Container: #{{RESULTS_SECTION_ID}}</span>
+                <span class="hud-pill status-active">● Active Verified Tier</span>
+            </div>
             <div class="score-box">
-                <div class="score-label">Verified Player Tier Status</div>
+                <div class="score-label">Verified Player Tier Status (DOM: #{{RANK_BADGE_ID}})</div>
                 {{MOVED_WRAPPER_START}}
                 <div class="score-value" id="{{RANK_BADGE_ID}}">{{RANK_BADGE_TEXT}}</div>
                 {{MOVED_WRAPPER_END}}
@@ -514,7 +692,10 @@
 
             <!-- Playwright Target: Export Button -->
             {{TOOLBAR_WRAPPER_START}}
-            <button id="{{EXPORT_BTN_ID}}" class="action-btn export-btn">Export Match Report</button>
+            <button id="{{EXPORT_BTN_ID}}" class="action-btn export-btn">
+                <span>📊 Export Match Report</span>
+                <span class="dom-tag">id="#{{EXPORT_BTN_ID}}"</span>
+            </button>
             {{TOOLBAR_WRAPPER_END}}
 
             <!-- Playwright Target: Error Display -->
@@ -629,6 +810,11 @@
             finishMatch(true);
         }
 
+        const WIN_MESSAGE = "Match Complete: You Win!";
+        const matchOverlayMsg = document.getElementById("match-overlay-msg");
+        if (matchStatusMsg) matchStatusMsg.textContent = WIN_MESSAGE;
+        if (matchOverlayMsg) matchOverlayMsg.textContent = WIN_MESSAGE;
+
         function finishMatch(won) {
             gameActive = false;
             const existing = arenaBoard.querySelector(".target-orb");
@@ -637,8 +823,12 @@
             matchOverlay.style.display = "flex";
             if (won) {
                 // Key text element for user customization: "Victory! Match Complete"
-                matchStatusMsg.textContent = "Match Complete: You Win!";
+                matchStatusMsg.textContent = WIN_MESSAGE;
                 matchStatusMsg.style.color = "#10b981";
+                if (matchOverlayMsg) {
+                    matchOverlayMsg.textContent = WIN_MESSAGE;
+                    matchOverlayMsg.style.color = "#10b981";
+                }
                 matchSummaryText.textContent = `Score: ${matchScore.toLocaleString()} pts | 100% Accuracy. Leaderboard ready for sync.`;
                 playBeep(659, 0.12, "sine");
                 setTimeout(() => playBeep(880, 0.2, "sine"), 120);
@@ -649,6 +839,10 @@
             } else {
                 matchStatusMsg.textContent = "Match Aborted";
                 matchStatusMsg.style.color = "#ef4444";
+                if (matchOverlayMsg) {
+                    matchOverlayMsg.textContent = "Match Aborted";
+                    matchOverlayMsg.style.color = "#ef4444";
+                }
             }
             startBtn.textContent = "↻ Play Again";
             gameTimerDisplay.textContent = "Finished";
@@ -658,13 +852,16 @@
         if (quickSimBtn) quickSimBtn.addEventListener("click", quickBlitz);
 
         // --- Core Sentinel Automation Handlers ---
-        // 1. Refresh Leaderboard reveals results section (Tested by Playwright test_refresh_leaderboard_and_rank_tier)
+        // 1. Refresh Leaderboard reveals results section with pulse animation (Tested by Playwright)
         document.addEventListener("click", (e) => {
             const btn = e.target.closest("button");
             if (btn && btn.id !== "export-btn" && btn.id !== "download-report-btn" && btn.id !== "start-match-btn" && btn.id !== "quick-sim-btn") {
                 const resultsSec = document.getElementById("results-section") || document.getElementById("match-results-wrapper") || document.querySelector(".results-section");
                 if (resultsSec) {
                     resultsSec.style.display = "block";
+                    resultsSec.classList.remove("pulse-highlight");
+                    void resultsSec.offsetWidth;
+                    resultsSec.classList.add("pulse-highlight");
                     playBeep(520, 0.08, "triangle");
                 }
             }
@@ -706,7 +903,7 @@
 `Sentinel QC Match Performance Report
 ======================================
 Generated: ${timestampStr}
-Player Name: Viper_QC
+Player Name: vaibhav
 Match Status: ${matchStatusMsg ? matchStatusMsg.textContent : "Victory"}
 Final Score: ${currentScore}
 Rank Tier: ${currentRank}
@@ -720,7 +917,7 @@ Verified By: Sentinel Autonomous QC Engine
                     const downloadUrl = URL.createObjectURL(blob);
                     const link = document.createElement("a");
                     link.href = downloadUrl;
-                    link.setAttribute("download", `Sentinel_Match_Report_Viper_QC_${Date.now()}.csv`);
+                    link.setAttribute("download", `Sentinel_Match_Report_vaibhav_${Date.now()}.csv`);
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);

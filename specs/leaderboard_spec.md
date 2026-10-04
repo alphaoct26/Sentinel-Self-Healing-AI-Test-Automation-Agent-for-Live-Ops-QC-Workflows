@@ -16,4 +16,5 @@ Description: Live-service game web dashboard displaying real-time player ranking
 - **Given** the live leaderboard results section is displayed
 - **When** the user clicks the export match report button `#export-btn`
 - **Then** the application triggers the match report export request `/api/export-pdf`
-- **And** no error message `#error-display` is displayed
+- **And** no error message `#error-display` is display
+- **And** the PDF report is generated with match statistcs

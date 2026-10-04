@@ -277,7 +277,56 @@ class TargetAppHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"status": "error", "error_summary": str(e)}).encode("utf-8"))
             return
 
+        if parsed.path == "/api/live-edit":
+            if not is_local:
+                self.send_error(403, "Forbidden: Shell execution endpoints only accessible from localhost.")
+                return
+
+            instruction = body.get("instruction", "").strip()
+            target_file = body.get("file", None)
+
+            if not instruction:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "error": "No instruction provided."}).encode("utf-8"))
+                return
+
+            print(f"[TargetApp Server] Live edit via /api/live-edit: \"{instruction}\"")
+            try:
+                cmd_args = [sys.executable, str(ROOT_DIR / "src" / "cli.py"), "edit", instruction, "-y"]
+                res = subprocess.run(cmd_args, capture_output=True, text=True, cwd=str(ROOT_DIR), timeout=120)
+
+                success = "SUCCESS" in res.stdout
+                resp_payload = {
+                    "status": "ok" if success else "error",
+                    "applied": success,
+                    "instruction": instruction,
+                    "stdout": res.stdout,
+                    "stderr": res.stderr
+                }
+
+                # Set drift mode to CUSTOM_EDIT so the telemetry HUD reflects it
+                DRIFT_MODE = "CUSTOM_EDIT"
+
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps(resp_payload).encode("utf-8"))
+            except subprocess.TimeoutExpired:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "error": "Live edit exceeded 120s timeout."}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "error": str(e)}).encode("utf-8"))
+            return
+
         if parsed.path == "/api/export-pdf":
+
             global INTERMITTENT_FLAG
             if DRIFT_MODE in ["REAL_BUG", "BUG_HTTP_500", "COMPOUND_SELECTOR_AND_500"]:
                 self.send_response(500)
