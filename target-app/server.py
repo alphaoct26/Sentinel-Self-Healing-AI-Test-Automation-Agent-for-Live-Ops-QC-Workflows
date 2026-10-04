@@ -195,7 +195,11 @@ class TargetAppHandler(BaseHTTPRequestHandler):
 
             print("[TargetApp Server] Executing test suite CLI run via /api/run-test...")
             try:
-                res = subprocess.run([sys.executable, str(ROOT_DIR / "src" / "cli.py"), "run"], capture_output=True, text=True, cwd=str(ROOT_DIR), timeout=90)
+                res = subprocess.run(
+                    [sys.executable, str(ROOT_DIR / "src" / "cli.py"), "run"],
+                    capture_output=True, text=True, encoding="utf-8", errors="replace",
+                    cwd=str(ROOT_DIR), timeout=90
+                )
                 run_files = sorted(list(RUNS_DIR.glob("run_*.json")), key=lambda p: p.stat().st_mtime, reverse=True)
                 run_data = {}
                 if run_files:
@@ -236,7 +240,11 @@ class TargetAppHandler(BaseHTTPRequestHandler):
 
             print("[TargetApp Server] Running self-healing agent CLI heal via /api/heal...")
             try:
-                res = subprocess.run([sys.executable, str(ROOT_DIR / "src" / "cli.py"), "heal"], capture_output=True, text=True, cwd=str(ROOT_DIR), timeout=90)
+                res = subprocess.run(
+                    [sys.executable, str(ROOT_DIR / "src" / "cli.py"), "heal"],
+                    capture_output=True, text=True, encoding="utf-8", errors="replace",
+                    cwd=str(ROOT_DIR), timeout=90
+                )
                 repair_dirs = sorted([d for d in REPAIRS_DIR.glob("*") if d.is_dir()], key=lambda p: p.stat().st_mtime, reverse=True)
                 repair_data = {}
                 if repair_dirs:
@@ -289,7 +297,10 @@ class TargetAppHandler(BaseHTTPRequestHandler):
             print(f"[TargetApp Server] Live edit via /api/live-edit: \"{instruction}\"")
             try:
                 cmd_args = [sys.executable, str(ROOT_DIR / "src" / "cli.py"), "edit", instruction, "-y"]
-                res = subprocess.run(cmd_args, capture_output=True, text=True, cwd=str(ROOT_DIR), timeout=120)
+                res = subprocess.run(
+                    cmd_args, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                    cwd=str(ROOT_DIR), timeout=120
+                )
 
                 success = "SUCCESS" in res.stdout
                 resp_payload = {
