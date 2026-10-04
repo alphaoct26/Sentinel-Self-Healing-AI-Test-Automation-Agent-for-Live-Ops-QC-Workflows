@@ -11,6 +11,7 @@ Description: Live-service game web dashboard displaying real-time player ranking
 - **When** the user clicks the refresh leaderboard button `#refresh-btn`
 - **Then** the results section `#results-section` becomes visible
 - **And** element `#rank-badge` displays exact text `"Top Rank: Elite"`
+- **And** the top player row `#player-row-1` displays player name `"Viper_QC"`
 
 ### Scenario 2: Export Match Report
 - **Given** the live leaderboard results section is displayed

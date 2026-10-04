@@ -583,8 +583,8 @@
     <div class="container">
         <div class="header-section">
             <div>
-                <h1>Cyber Arena: Match Standings</h1>
-                <p class="subtitle">Season 4 competitive live-service player metrics</p>
+                <h1>boards of game</h1>
+                <p class="subtitle">Season 7 competitive live-service player metrics</p>
             </div>
             <div class="drift-badge" id="drift-mode-indicator">Mode: {{DRIFT_MODE}}</div>
         </div>
@@ -597,15 +597,15 @@
             </div>
             <div class="hud-col">
                 <span class="hud-label">Verified Tier Badge</span>
-                <span class="hud-value hud-tier">{{RANK_BADGE_TEXT}}</span>
+                <span class="hud-value hud-tier" id="telemetry-rank-text">Top Rank: Elite</span>
             </div>
             <div class="hud-col">
                 <span class="hud-label">Button Selector</span>
-                <span class="hud-value hud-code">#{{REFRESH_BTN_ID}}</span>
+                <span class="hud-value hud-code" id="telemetry-btn-sel">#refresh-btn</span>
             </div>
             <div class="hud-col">
                 <span class="hud-label">Results Container</span>
-                <span class="hud-value hud-code">#{{RESULTS_SECTION_ID}}</span>
+                <span class="hud-value hud-code" id="telemetry-results-sel">#results-section</span>
             </div>
         </div>
 
@@ -628,7 +628,7 @@
                 </div>
                 <div class="strip-item">
                     <span class="strip-label">Verified Standing:</span>
-                    <span class="strip-tier-preview">{{RANK_BADGE_TEXT}}</span>
+                    <span class="strip-tier-preview">Top Rank: Elite</span>
                 </div>
             </div>
 
@@ -672,29 +672,29 @@
         </table>
 
         <!-- Playwright Target: Refresh Leaderboard Button -->
-        <button id="{{REFRESH_BTN_ID}}" class="action-btn">
+        <button id="refresh-btn" class="action-btn">
             <span>🔄 Refresh Leaderboard</span>
-            <span class="dom-tag">id="#{{REFRESH_BTN_ID}}"</span>
+            <span class="dom-tag">id="#refresh-btn"</span>
         </button>
 
         <!-- Playwright Target: Results Section & Rank Badge -->
-        <div class="results-section" id="{{RESULTS_SECTION_ID}}">
+        <div class="results-section" id="results-section">
             <div class="section-badge-header">
-                <span class="hud-pill">Target DOM Container: #{{RESULTS_SECTION_ID}}</span>
+                <span class="hud-pill">Target DOM Container: #results-section</span>
                 <span class="hud-pill status-active">● Active Verified Tier</span>
             </div>
             <div class="score-box">
-                <div class="score-label">Verified Player Tier Status (DOM: #{{RANK_BADGE_ID}})</div>
+                <div class="score-label">Verified Player Tier Status (DOM: #rank-badge)</div>
                 {{MOVED_WRAPPER_START}}
-                <div class="score-value" id="{{RANK_BADGE_ID}}">{{RANK_BADGE_TEXT}}</div>
+                <div class="score-value" id="rank-badge">Top Rank: Elite</div>
                 {{MOVED_WRAPPER_END}}
             </div>
 
             <!-- Playwright Target: Export Button -->
             {{TOOLBAR_WRAPPER_START}}
-            <button id="{{EXPORT_BTN_ID}}" class="action-btn export-btn">
+            <button id="export-btn" class="action-btn export-btn">
                 <span>📊 Export Match Report</span>
-                <span class="dom-tag">id="#{{EXPORT_BTN_ID}}"</span>
+                <span class="dom-tag">id="#export-btn"</span>
             </button>
             {{TOOLBAR_WRAPPER_END}}
 
@@ -852,7 +852,7 @@
         if (quickSimBtn) quickSimBtn.addEventListener("click", quickBlitz);
 
         // --- Core Sentinel Automation Handlers ---
-        // 1. Refresh Leaderboard reveals results section with pulse animation (Tested by Playwright)
+        // 1. Sync Match Data reveals results section with pulse animation (Tested by Playwright)
         document.addEventListener("click", (e) => {
             const btn = e.target.closest("button");
             if (btn && btn.id !== "export-btn" && btn.id !== "download-report-btn" && btn.id !== "start-match-btn" && btn.id !== "quick-sim-btn") {
@@ -895,7 +895,7 @@
 
                     // --- Real Working File Download Generation (CSV/JSON Report) ---
                     const rankBadgeEl = document.getElementById("rank-badge") || document.getElementById("tier-pill") || document.querySelector(".score-value");
-                    const currentRank = rankBadgeEl ? rankBadgeEl.textContent.trim() : "Top Rank: Elite";
+                    const currentRank = rankBadgeEl ? rankBadgeEl.textContent.trim() : "Grandma";
                     const currentScore = viperScoreTd ? viperScoreTd.textContent.trim() : "14,250";
                     const timestampStr = new Date().toISOString();
 
@@ -903,10 +903,10 @@
 `Sentinel QC Match Performance Report
 ======================================
 Generated: ${timestampStr}
-Player Name: vaibhav
+Player Name: vaibhavqc
 Match Status: ${matchStatusMsg ? matchStatusMsg.textContent : "Victory"}
 Final Score: ${currentScore}
-Rank Tier: ${currentRank}
+Diamond Legend${currentRank}
 Hits: ${hitsCount}/5
 Accuracy: 100%
 Server Session ID: ${Math.random().toString(36).substring(2, 10).toUpperCase()}
@@ -917,7 +917,7 @@ Verified By: Sentinel Autonomous QC Engine
                     const downloadUrl = URL.createObjectURL(blob);
                     const link = document.createElement("a");
                     link.href = downloadUrl;
-                    link.setAttribute("download", `Sentinel_Match_Report_vaibhav_${Date.now()}.csv`);
+                    link.setAttribute("download", `Sentinel_Match_Report_vaibhavqc_${Date.now()}.csv`);
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);

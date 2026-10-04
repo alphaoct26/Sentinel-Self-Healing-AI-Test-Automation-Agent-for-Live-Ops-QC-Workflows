@@ -104,58 +104,52 @@ class TargetAppHandler(BaseHTTPRequestHandler):
             with open(html_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            refresh_btn_id = "refresh-btn"
-            results_section_id = "results-section"
-            rank_badge_id = "rank-badge"
-            export_btn_id = "export-btn"
-            rank_badge_text = "Top Rank: Elite"
-            moved_wrapper_start = ""
-            moved_wrapper_end = ""
-            toolbar_wrapper_start = ""
-            toolbar_wrapper_end = ""
+            # Dynamic simulated drift presets
+            if DRIFT_MODE not in ["NORMAL", "CUSTOM_EDIT"]:
+                # Selector mutations
+                if DRIFT_MODE in ["SELECTOR_DRIFT", "SELECTOR_RENAME_BTN", "COMPOUND_SELECTOR_AND_500", "COMPOUND_SELECTOR_AND_COPY"]:
+                    content = content.replace('id="refresh-btn"', 'id="reload-leaderboard-btn"').replace('id="#refresh-btn"', 'id="#reload-leaderboard-btn"')
+                elif DRIFT_MODE == "SELECTOR_PREFIX_CHANGE":
+                    content = content.replace('id="refresh-btn"', 'id="btn-refresh-stats"').replace('id="#refresh-btn"', 'id="#btn-refresh-stats"')
+                elif DRIFT_MODE == "SELECTOR_RENAME_CONTAINER":
+                    content = content.replace('id="results-section"', 'id="match-results-wrapper"').replace('#results-section', '#match-results-wrapper')
+                elif DRIFT_MODE == "SELECTOR_RENAME_BADGE":
+                    content = content.replace('id="rank-badge"', 'id="tier-pill"').replace('#rank-badge', '#tier-pill')
+                elif DRIFT_MODE == "SELECTOR_RENAME_EXPORT":
+                    content = content.replace('id="export-btn"', 'id="download-report-btn"').replace('#export-btn', '#download-report-btn')
 
-            # Selector mutations
-            if DRIFT_MODE in ["SELECTOR_DRIFT", "SELECTOR_RENAME_BTN", "COMPOUND_SELECTOR_AND_500", "COMPOUND_SELECTOR_AND_COPY"]:
-                refresh_btn_id = "reload-leaderboard-btn"
-            elif DRIFT_MODE == "SELECTOR_PREFIX_CHANGE":
-                refresh_btn_id = "btn-refresh-stats"
-            elif DRIFT_MODE == "SELECTOR_RENAME_CONTAINER":
-                results_section_id = "match-results-wrapper"
-            elif DRIFT_MODE == "SELECTOR_RENAME_BADGE":
-                rank_badge_id = "tier-pill"
-            elif DRIFT_MODE == "SELECTOR_RENAME_EXPORT":
-                export_btn_id = "download-report-btn"
+                # Copy/Assertion mutations
+                if DRIFT_MODE in ["ASSERTION_DRIFT", "COPY_RANK_TIER_LABEL", "COMPOUND_COPY_AND_403", "COMPOUND_SELECTOR_AND_COPY"]:
+                    content = content.replace("Top Rank: Elite", "Current Tier: Elite")
+                elif DRIFT_MODE == "COPY_CASE_CHANGE":
+                    content = content.replace("Top Rank: Elite", "TOP RANK: ELITE")
+                elif DRIFT_MODE == "COPY_PUNCTUATION_CHANGE":
+                    content = content.replace("Top Rank: Elite", "Top Rank - Elite")
+                elif DRIFT_MODE == "COPY_EXPANDED_PHRASE":
+                    content = content.replace("Top Rank: Elite", "Season Top Rank: Elite Tier")
+                elif DRIFT_MODE == "COPY_LOCALIZED_SYNONYM":
+                    content = content.replace("Top Rank: Elite", "Highest Rank: Elite")
 
-            # Copy/Assertion mutations
-            if DRIFT_MODE in ["ASSERTION_DRIFT", "COPY_RANK_TIER_LABEL", "COMPOUND_COPY_AND_403", "COMPOUND_SELECTOR_AND_COPY"]:
-                rank_badge_text = "Current Tier: Elite"
-            elif DRIFT_MODE == "COPY_CASE_CHANGE":
-                rank_badge_text = "TOP RANK: ELITE"
-            elif DRIFT_MODE == "COPY_PUNCTUATION_CHANGE":
-                rank_badge_text = "Top Rank - Elite"
-            elif DRIFT_MODE == "COPY_EXPANDED_PHRASE":
-                rank_badge_text = "Season Top Rank: Elite Tier"
-            elif DRIFT_MODE == "COPY_LOCALIZED_SYNONYM":
-                rank_badge_text = "Highest Rank: Elite"
+                # Moved DOM mutations
+                if DRIFT_MODE == "MOVED_ELEMENT_NESTED":
+                    content = content.replace("{{MOVED_WRAPPER_START}}", '<div class="sub-card-container" style="padding: 4px; border: 1px dashed #475569; border-radius: 6px;">')
+                    content = content.replace("{{MOVED_WRAPPER_END}}", '</div>')
+                elif DRIFT_MODE == "MOVED_BUTTON_CONTAINER":
+                    content = content.replace("{{TOOLBAR_WRAPPER_START}}", '<div class="action-toolbar" style="margin-top: 10px; display: flex; gap: 8px;">')
+                    content = content.replace("{{TOOLBAR_WRAPPER_END}}", '</div>')
 
-            # Moved DOM mutations
-            if DRIFT_MODE == "MOVED_ELEMENT_NESTED":
-                moved_wrapper_start = '<div class="sub-card-container" style="padding: 4px; border: 1px dashed #475569; border-radius: 6px;">'
-                moved_wrapper_end = '</div>'
-            elif DRIFT_MODE == "MOVED_BUTTON_CONTAINER":
-                toolbar_wrapper_start = '<div class="action-toolbar" style="margin-top: 10px; display: flex; gap: 8px;">'
-                toolbar_wrapper_end = '</div>'
-
+            # Clean any remaining wrappers and tags
             content = content.replace("{{DRIFT_MODE}}", DRIFT_MODE)
-            content = content.replace("{{REFRESH_BTN_ID}}", refresh_btn_id)
-            content = content.replace("{{RESULTS_SECTION_ID}}", results_section_id)
-            content = content.replace("{{RANK_BADGE_ID}}", rank_badge_id)
-            content = content.replace("{{EXPORT_BTN_ID}}", export_btn_id)
-            content = content.replace("{{RANK_BADGE_TEXT}}", rank_badge_text)
-            content = content.replace("{{MOVED_WRAPPER_START}}", moved_wrapper_start)
-            content = content.replace("{{MOVED_WRAPPER_END}}", moved_wrapper_end)
-            content = content.replace("{{TOOLBAR_WRAPPER_START}}", toolbar_wrapper_start)
-            content = content.replace("{{TOOLBAR_WRAPPER_END}}", toolbar_wrapper_end)
+            content = content.replace("{{MOVED_WRAPPER_START}}", "")
+            content = content.replace("{{MOVED_WRAPPER_END}}", "")
+            content = content.replace("{{TOOLBAR_WRAPPER_START}}", "")
+            content = content.replace("{{TOOLBAR_WRAPPER_END}}", "")
+            # Fallback backward-compatibility for template tags if any still exist
+            content = content.replace("{{REFRESH_BTN_ID}}", "refresh-btn")
+            content = content.replace("{{RESULTS_SECTION_ID}}", "results-section")
+            content = content.replace("{{RANK_BADGE_ID}}", "rank-badge")
+            content = content.replace("{{EXPORT_BTN_ID}}", "export-btn")
+            content = content.replace("{{RANK_BADGE_TEXT}}", "Top Rank: Elite")
 
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")

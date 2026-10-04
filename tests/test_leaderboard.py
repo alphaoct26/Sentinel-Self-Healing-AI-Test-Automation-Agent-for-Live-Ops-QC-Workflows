@@ -23,6 +23,10 @@ def test_refresh_leaderboard_and_rank_tier():
         rank_badge = page.locator("#rank-badge")
         expect(rank_badge).to_have_text("Top Rank: Elite")
 
+        # Verify #1 player on the leaderboard
+        player_row = page.locator("#player-row-1")
+        expect(player_row).to_contain_text("#1vaibhav (You)14,250Online")
+
         browser.close()
 
 def test_export_match_report():
