@@ -49,12 +49,12 @@ In live-service web applications, front-end developers frequently push minor cos
 | **AI Diagnosis & LLMs** | OpenAI Python SDK | `openai==2.32.0` | Client interface connecting to LLM providers |
 | **Primary AI Provider** | NVIDIA NIM API | Model: `meta/llama-3.2-11b-vision-instruct` | Multimodal diagnostic reasoning, DOM analysis, and confidence scoring |
 | **Secondary AI Provider** | Google Gemini API | Model: `gemini-2.5-flash` | Automatic fallback provider for diagnosis and test generation |
-| **Local Heuristics** | Python Standard Library | `re`, `difflib`, `json`, `ast` | Precision regex and keyword-based fallback classifier when offline |
-| **Knowledge Engine** | Custom RAG Engine | In-Memory TF-IDF Vectorizer | Natural-language query assistant over specs, tests, and run logs |
+| **Local Heuristics** | Python Standard Library | `re`, `difflib`, `json`, `ast` | Fallback classifier when offline. Offline mode blocks failures and routes them to human review; it does not heal. Healing requires the LLM keys. |
+| **Knowledge Engine** | Custom RAG Engine | In-Memory TF-IDF Vectorizer | TF-IDF keyword retrieval over specs, tests and run artifacts |
 | **Target Application** | Node.js & Python | `Python http.server` + Node Express | Live drift-simulation target app (`http://localhost:3001`) |
 | **Environment Mgmt** | python-dotenv | `python-dotenv==1.2.2` | Loading `.env` keys (`NVIDIA_API_KEY`, `GEMINI_API_KEY`) |
 | **HTTP Networking** | Requests | `requests==2.33.1` | CLI communication with target app drift endpoints |
-| **CI/CD Automation** | GitHub Actions | Ubuntu Latest, Checkout v4, Setup-Python v5 | Automated regression testing on push and pull-request |
+| **CI/CD Automation** | GitHub Actions & Jenkins | Ubuntu / Docker | GitHub Actions workflow runs on push/PR; the Jenkinsfile is written and reviewed but not yet run on a live Jenkins server. |
 
 ---
 
@@ -139,7 +139,7 @@ sentinel-qc/
 - **Automated Pre-Write Backup**: Automatically archives the original file, generated patch, and metadata to `artifacts/edits/<timestamp>/` prior to modifying disk state.
 
 ### 5. RAG Knowledge Assistant (`src/ragEngine.py`)
-- **Function**: Natural-language Q&A assistant over the repository.
+- **Function**: TF-IDF keyword retrieval over specs, tests and run artifacts for natural-language Q&A assistance.
 - **Data Ingestion**: Parses feature specs (`specs/`), active test code (`tests/`), and execution run history (`artifacts/runs/`).
 - **Query Loop**: Allows engineers to run `python src/cli.py ask "Why did the last run fail?"` or `python src/cli.py ask "What selectors are used in the leaderboard spec?"`.
 
@@ -204,53 +204,54 @@ Sentinel was benchmarked across **23 real, distinct mutation scenarios** running
 
 ### Benchmark Summary Metrics
 - **Total Scenarios Evaluated**: 23
-- **Heal Precision**: **`100.0%`** (5 / 5 verified repairs cleanly restored test passing state without breaking test semantics)
-- **False-Heal Rate**: **`0.0%`** (0 / 8 genuine backend bugs mistakenly patched — 0 test compromises)
-- **Safeguard Enforcement**: **`62.5%`** directly intercepted by the Human Review Safeguard; remaining regressions intercepted by verification rollback.
+- **Heal Precision**: **`100.0%`** (10/10 committed patches were correct; 10 of 14 candidate patches were correct, 4 were discarded by live verification)
+- **Cosmetic Drift Healing Rate**: **`90.9%`** (10 / 11 cosmetic scenarios healed; 1 compound drift safely rolled back)
+- **False-Heal Rate & Safeguard Enforcement**: **`0.0%`** (0/8 bad patches committed; 4 real bugs blocked by the classifier, 3 rolled back by live verification, 1 (BUG_SERVER_TIMEOUT) not detected by the test because the client tolerates the delay)
 - **Pass-through / Robust Locators**: 4 scenarios passed without repair needed, confirming Playwright ID locators remain resilient across structural DOM nesting and minor latency.
+- **Offline Mode Baseline**: In offline mode without LLM keys: 23 scenarios, 0 true heals (0/11), 0 false heals (0/8), 6 of 8 real bugs held directly (75.0%), precision N/A with 0 patches attempted. Offline mode blocks failures and routes them to human review; it does not heal. Healing requires the LLM keys.
 
 ### Full Empirical Results Matrix
 
 | # | Scenario ID | Category | Target App Mutation Behavior | Ground Truth | AI Classification & Confidence | Sentinel Action & Safeguard | Verification Result |
 | :-: | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 01 | **`NORMAL`** | Baseline | Stable baseline UI locators & server API | Baseline | None (Clean run) | None needed (Baseline pass) | **PASSED** (Baseline) |
-| 02 | **`SELECTOR_RENAME_BTN`** | Selector Drift | Renamed button ID `#refresh-btn` $\rightarrow$ `#reload-leaderboard-btn` | Cosmetic Drift | `SELECTOR_DRIFT` (90.0%) | Patch Verification Failed (Rolled Back) | **SAFE** (Rollback held) |
-| 03 | **`SELECTOR_PREFIX_CHANGE`** | Selector Drift | Prefix changed `#refresh-btn` $\rightarrow$ `#btn-refresh-stats` | Cosmetic Drift | `SELECTOR_DRIFT` (90.0%) | Patch Verification Failed (Rolled Back) | **SAFE** (Rollback held) |
-| 04 | **`SELECTOR_RENAME_CONTAINER`** | Selector Drift | Container renamed `#results-section` $\rightarrow$ `#match-results-wrapper` | Cosmetic Drift | `SELECTOR_DRIFT` (90.0%) | Patch Verification Failed (Rolled Back) | **SAFE** (Rollback held) |
-| 05 | **`SELECTOR_RENAME_BADGE`** | Selector Drift | Badge renamed `#rank-badge` $\rightarrow$ `#tier-pill` | Cosmetic Drift | `SELECTOR_DRIFT` (90.0%) | Patch Verification Failed (Rolled Back) | **SAFE** (Rollback held) |
-| 06 | **`SELECTOR_RENAME_EXPORT`** | Selector Drift | Export button renamed `#export-btn` $\rightarrow$ `#download-report-btn` | Cosmetic Drift | `SELECTOR_DRIFT` (90.0%) | Patch Verification Failed (Rolled Back) | **SAFE** (Rollback held) |
+| 02 | **`SELECTOR_RENAME_BTN`** | Selector Drift | Renamed button ID `#refresh-btn` $\rightarrow$ `#reload-leaderboard-btn` | Cosmetic Drift | `SELECTOR_DRIFT` (80.0%) | **Auto-Patched**: Updated element selector | **PASSED** (Verified) |
+| 03 | **`SELECTOR_PREFIX_CHANGE`** | Selector Drift | Prefix changed `#refresh-btn` $\rightarrow$ `#btn-refresh-stats` | Cosmetic Drift | `SELECTOR_DRIFT` (80.0%) | **Auto-Patched**: Updated element selector | **PASSED** (Verified) |
+| 04 | **`SELECTOR_RENAME_CONTAINER`** | Selector Drift | Container renamed `#results-section` $\rightarrow$ `#match-results-wrapper` | Cosmetic Drift | `SELECTOR_DRIFT` (90.0%) | **Auto-Patched**: Updated element selector | **PASSED** (Verified) |
+| 05 | **`SELECTOR_RENAME_BADGE`** | Selector Drift | Badge renamed `#rank-badge` $\rightarrow$ `#tier-pill` | Cosmetic Drift | `SELECTOR_DRIFT` (90.0%) | **Auto-Patched**: Updated element selector | **PASSED** (Verified) |
+| 06 | **`SELECTOR_RENAME_EXPORT`** | Selector Drift | Export button renamed `#export-btn` $\rightarrow$ `#download-report-btn` | Cosmetic Drift | `SELECTOR_DRIFT` (90.0%) | **Auto-Patched**: Updated element selector | **PASSED** (Verified) |
 | 07 | **`MOVED_ELEMENT_NESTED`** | DOM Structure | `#rank-badge` nested in sub-card div wrapper | DOM Reorg | None (Locator robust) | None needed (ID locator resilient) | **PASSED** (Resilient) |
 | 08 | **`MOVED_BUTTON_CONTAINER`** | DOM Structure | `#export-btn` nested in action toolbar wrapper | DOM Reorg | None (Locator robust) | None needed (ID locator resilient) | **PASSED** (Resilient) |
 | 09 | **`SLOW_INITIAL_RENDER`** | Timing | Page response delayed by 1200ms | Latency | None (Within timeout) | None needed (Within 3000ms window) | **PASSED** (Tolerant) |
-| 10 | **`COPY_RANK_TIER_LABEL`** | Assertion Drift | Badge text changed `"Top Rank: Elite"` $\rightarrow$ `"Current Tier: Elite"` | Cosmetic Drift | `ASSERTION_DRIFT` (80.0%) | **Auto-Patched**: Updated expected text | **PASSED** (Verified) |
+| 10 | **`COPY_RANK_TIER_LABEL`** | Assertion Drift | Badge text changed `"Top Rank: Elite"` $\rightarrow$ `"Current Tier: Elite"` | Cosmetic Drift | `ASSERTION_DRIFT` (90.0%) | **Auto-Patched**: Updated expected text | **PASSED** (Verified) |
 | 11 | **`COPY_CASE_CHANGE`** | Assertion Drift | Uppercase formatting `"TOP RANK: ELITE"` | Cosmetic Drift | `ASSERTION_DRIFT` (90.0%) | **Auto-Patched**: Updated expected text | **PASSED** (Verified) |
-| 12 | **`COPY_PUNCTUATION_CHANGE`** | Assertion Drift | Separator updated `"Top Rank - Elite"` | Cosmetic Drift | `ASSERTION_DRIFT` (80.0%) | **Auto-Patched**: Updated expected text | **PASSED** (Verified) |
+| 12 | **`COPY_PUNCTUATION_CHANGE`** | Assertion Drift | Separator updated `"Top Rank - Elite"` | Cosmetic Drift | `ASSERTION_DRIFT` (90.0%) | **Auto-Patched**: Updated expected text | **PASSED** (Verified) |
 | 13 | **`COPY_EXPANDED_PHRASE`** | Assertion Drift | Extended copy `"Season Top Rank: Elite Tier"` | Cosmetic Drift | `ASSERTION_DRIFT` (90.0%) | **Auto-Patched**: Updated expected text | **PASSED** (Verified) |
-| 14 | **`COPY_LOCALIZED_SYNONYM`** | Assertion Drift | Alternate wording `"Highest Rank: Elite"` | Cosmetic Drift | `ASSERTION_DRIFT` (90.0%) | **Auto-Patched**: Updated expected text | **PASSED** (Verified) |
+| 14 | **`COPY_LOCALIZED_SYNONYM`** | Assertion Drift | Alternate wording `"Highest Rank: Elite"` | Cosmetic Drift | `SELECTOR_DRIFT` (90.0%) | **Auto-Patched**: Updated expected text | **PASSED** (Verified) |
 | 15 | **`BUG_HTTP_500`** | Backend Bug | `/api/export-pdf` returns `HTTP 500 Internal Server Error` | Real Bug | `GENUINE_BUG` (90.0%) | **Safeguard Triggered**: Declined auto-patch | **HELD** (Human Review) |
 | 16 | **`BUG_HTTP_403_FORBIDDEN`** | Backend Bug | `/api/export-pdf` returns `HTTP 403 Forbidden` | Real Bug | `GENUINE_BUG` (90.0%) | **Safeguard Triggered**: Declined auto-patch | **HELD** (Human Review) |
 | 17 | **`BUG_MALFORMED_JSON`** | Backend Bug | `/api/export-pdf` returns corrupted non-JSON stream | Real Bug | `GENUINE_BUG` (80.0%) | **Safeguard Triggered**: Declined auto-patch | **HELD** (Human Review) |
 | 18 | **`BUG_SERVER_TIMEOUT`** | Backend Bug | `/api/export-pdf` delays 4.0s (exceeds client timeout) | Real Bug | None (Async tolerance) | Baseline / Locator Robust | **PASSED** (Timing pass) |
 | 19 | **`BUG_MISSING_PAYLOAD_FIELD`** | Backend Bug | `/api/export-pdf` returns `{}` missing `pdf_url` | Real Bug | `ASSERTION_DRIFT` (80.0%) | Patch Verification Failed (Rolled Back) | **SAFE** (Rollback held) |
 | 20 | **`INTERMITTENT_EXPORT_FAILURE`** | Backend Bug | First call returns HTTP 500 transient failure | Real Bug | `GENUINE_BUG` (80.0%) | **Safeguard Triggered**: Declined auto-patch | **HELD** (Human Review) |
-| 21 | **`COMPOUND_SELECTOR_AND_500`** | Compound Drift | Renamed button `#refresh-btn` AND HTTP 500 export failure | Real Bug | `SELECTOR_DRIFT` (90.0%) | Patch Verification Failed (Rolled Back) | **SAFE** (Rollback held) |
-| 22 | **`COMPOUND_COPY_AND_403`** | Compound Drift | Changed tier copy AND HTTP 403 Forbidden | Real Bug | `GENUINE_BUG` (80.0%) | **Safeguard Triggered**: Declined auto-patch | **HELD** (Human Review) |
-| 23 | **`COMPOUND_SELECTOR_AND_COPY`** | Compound Drift | Renamed `#refresh-btn` AND changed tier copy | Cosmetic Drift | `SELECTOR_DRIFT` (90.0%) | Patch Verification Failed (Rolled Back) | **SAFE** (Rollback held) |
+| 21 | **`COMPOUND_SELECTOR_AND_500`** | Compound Drift | Renamed button `#refresh-btn` AND HTTP 500 export failure | Real Bug | `SELECTOR_DRIFT` (80.0%) | Patch Verification Failed (Rolled Back) | **SAFE** (Rollback held) |
+| 22 | **`COMPOUND_COPY_AND_403`** | Compound Drift | Changed tier copy AND HTTP 403 Forbidden | Real Bug | `ASSERTION_DRIFT` (80.0%) | Patch Verification Failed (Rolled Back) | **SAFE** (Rollback held) |
+| 23 | **`COMPOUND_SELECTOR_AND_COPY`** | Compound Drift | Renamed `#refresh-btn` AND changed tier copy | Cosmetic Drift | `SELECTOR_DRIFT` (80.0%) | Patch Verification Failed (Rolled Back) | **SAFE** (Rollback held) |
 
 ---
 
 ## 7. Confidence Scoring & The Double-Layer Safety Net
 
 ### How Confidence is Evaluated
-As documented in [`docs/confidence-scoring.md`](file:///d:/Projects/sentinel-qc/docs/confidence-scoring.md):
+As documented in [`docs/confidence-scoring.md`](confidence-scoring.md):
 1. **Primary AI Pipeline**: The confidence score is **purely LLM-self-reported** (the model outputs `"confidence": 0.90` in its JSON payload). It does **not** perform an algorithmic Tree Edit Distance or string metric in code.
-2. **Offline Fallback Pipeline**: Uses static constants (`0.95` for backend 500/403/timeout, `0.92` for selector drift, `0.90` for copy drift, `0.70` for ambiguous errors).
+2. **Offline Fallback Pipeline**: Uses static constants (`0.95` for backend 500/403/timeout, `0.92` for selector drift, `0.90` for copy drift, `0.70` for ambiguous errors). Offline mode blocks failures and routes them to human review; it does not heal. Healing requires the LLM keys. (Note: the timeout keyword rule matches first in Playwright failure summaries, so SELECTOR_DRIFT and ASSERTION_DRIFT heuristic rules are not reachable offline in the current implementation).
 3. **Threshold Check**: Must meet or exceed `CONFIDENCE_THRESHOLD = 0.80` (80%).
 
 ### Why Sentinel's Safety Does Not Rely on LLM Trust
 Because LLM self-reported confidence can be miscalibrated, Sentinel employs a **Double-Layer Safety Net**:
 1. **Layer 1: Category & Confidence Filter**: If the failure is classified as `GENUINE_BUG` or confidence is `< 80%`, the patch is declined before code is ever touched.
-2. **Layer 2: Live Execution Verification & Rollback**: Even if the LLM is 90% confident, Sentinel writes the patch to a staging buffer and **re-executes the actual Playwright test suite against the running app**. If the test fails, Sentinel **immediately rolls back to the clean baseline**. A patch is never permanently committed unless the test suite turns green.
+2. **Layer 2: Live Execution Verification & Rollback**: Even if the LLM is 90% confident, Sentinel writes the patch to a staging buffer and **re-executes the actual Playwright test suite against the running app**. If the test fails, Sentinel **immediately rolls back to the clean baseline**. A patch is only permanently committed if the test suite turns green.
 
 ---
 
@@ -261,11 +262,11 @@ To maintain integrity when explaining Sentinel to stakeholders or prompting AI a
 | What Sentinel DOES | What Sentinel DOES NOT Do (Non-Goals) |
 | :--- | :--- |
 | ✅ Auto-repairs broken element selectors (IDs, button labels). | ❌ **Does NOT alter feature specs or expected business outcomes**. It repairs tests to match specs, not specs to match bugs. |
-| ✅ Auto-updates minor copy changes that match UI intent. | ❌ **Does NOT blindly suppress failures**. If an API fails, it will never comment out an assertion or catch exceptions silently. |
+| ✅ Auto-updates minor copy changes that match UI intent. | ❌ **Does NOT blindly suppress failures**. If an API fails, it does not comment out an assertion or catch exceptions silently. |
 | ✅ Distinguishes cosmetic drift from backend crashes. | ❌ **Does NOT auto-patch backend code or application servers**. It only patches test locators and assertions. |
 | ✅ Enforces live verification before accepting any edit. | ❌ **Does NOT accept unverified edits**. If a proposed repair fails execution, it is rolled back instantly. |
 | ✅ Records visual before/after screenshots and unified diffs. | ❌ **Does NOT disguise LLM confidence as a mathematical metric**. It is explicitly acknowledged as self-reported. |
-| ✅ Runs headlessly in standard CI/CD (GitHub Actions). | ❌ **Does NOT require proprietary cloud runners or vendor lock-in**. Runs locally on standard Python + Playwright. |
+| ✅ Runs headlessly in CI/CD (GitHub Actions workflow runs on push/PR; the Jenkinsfile is written and reviewed but not yet run on a live Jenkins server). | ❌ **Does NOT require proprietary cloud runners or vendor lock-in**. Runs locally on standard Python + Playwright. |
 
 ---
 
@@ -325,7 +326,7 @@ Use this slide outline to create a high-impact presentation deck for management,
 ### Slide 3: The Solution — Sentinel's Three Pillars
 - **Pillar 1: Spec-to-Test Generation**: Plain-English requirements $\rightarrow$ clean Playwright suites.
 - **Pillar 2: Autonomous Cosmetic Healing**: Automatic detection and repair of renamed locators and copy drift.
-- **Pillar 3: The Human Review Safeguard**: Absolute refusal to apply fake fixes to genuine backend regressions.
+- **Pillar 3: The Human Review Safeguard**: Refusal to apply unverified fixes to genuine backend regressions.
 
 ### Slide 4: System Architecture & Workflow
 - *Embed the Mermaid architecture diagram from Section 5.*
@@ -337,10 +338,10 @@ Use this slide outline to create a high-impact presentation deck for management,
 - **Transparency Note**: Diagnostic confidence is LLM-self-reported, backed by deterministic test execution verification.
 
 ### Slide 6: Benchmark Results Across 23 Mutation Scenarios
-- **Key Metrics Highlight (Big Numbers)**:
-  - **`100.0%` Heal Precision**: Zero invalid or broken repairs accepted.
-  - **`0.0%` False-Heal Rate**: Zero real backend bugs masked by bad test edits.
-  - **`100%` Safety Enforcement**: Safeguard held or verification rollback intercepted 100% of real regression risks.
+- **Key Metrics Highlight (measured with LLM keys configured)**:
+  - **`100.0%` Heal Precision**: 10/10 committed patches were correct; 10 of 14 candidate patches were correct, 4 were discarded by live verification.
+  - **`0.0%` False-Heal Rate**: 0/8 bad patches committed; 4 real bugs blocked by the classifier, 3 rolled back by live verification, 1 (BUG_SERVER_TIMEOUT) not detected by the test because the client tolerates the delay.
+  - **Offline Mode**: Blocks failures and routes them to human review; does not heal.
 
 ### Slide 7: Live Target App & Demo Walkthrough
 - Showcase `target-app/views/dashboard.html` with real-time drift toggles and visual repair before/after diffs.
@@ -348,7 +349,7 @@ Use this slide outline to create a high-impact presentation deck for management,
 - Showcase `artifacts/AUDIT_LOG.md` master traceability index and automated backups in `artifacts/edits/`.
 
 ### Slide 8: CI/CD Integration & Enterprise Readiness
-- GitHub Actions workflow (`.github/workflows/test.yml`) running on push and PR.
+- CI/CD Automation: GitHub Actions workflow runs on push/PR; the Jenkinsfile is written and reviewed but not yet run on a live Jenkins server.
 - Zero vendor lock-in: Built on standard Python, Playwright, Pytest, and REST.
 
 ### Slide 9: Roadmap & Future Innovations
@@ -375,13 +376,13 @@ KEY CONTEXT:
    - src/generator.py: Converts specs to Playwright tests in tests/test_leaderboard.py.
    - src/runner.py: Headless test runner, captures DOM snapshots and before/after screenshots to artifacts/runs/.
    - src/selfHealer.py: AI diagnostic agent (SELECTOR_DRIFT, ASSERTION_DRIFT, GENUINE_BUG). Threshold is 80%. Validates candidate patches by re-executing runner.run_test_suite() and rolling back if tests fail.
-   - src/ragEngine.py: In-memory RAG query engine over specs, tests, and run logs.
+   - src/ragEngine.py: TF-IDF keyword retrieval over specs, tests and run artifacts.
    - src/cli.py: Main CLI tool (generate, run, heal, drift, ask).
    - target-app/server.py: Multi-threaded Python HTTP server simulating 23 drift mutation scenarios.
-   - scripts/benchmark_runner.py: Harness executing 23 mutation scenarios (100% precision, 0% false heals).
-   - .github/workflows/test.yml: CI/CD test runner workflow.
+   - scripts/benchmark_runner.py: Harness executing 23 mutation scenarios (100% precision, 0% false heals, measured with LLM keys configured; offline mode blocks failures and routes them to human review; it does not heal. Healing requires the LLM keys).
+   - .github/workflows/test.yml: CI/CD test runner workflow (GitHub Actions workflow runs on push/PR; the Jenkinsfile is written and reviewed but not yet run on a live Jenkins server).
 3. Critical Operational Rules:
-   - Never suppress genuine bugs. If backend returns 500, 403, or timeout, Sentinel triggers Human Review Safeguard.
-   - Confidence scoring is currently LLM-self-reported with static rule-based fallback; safety is guaranteed by live test verification rollback.
+   - Does not suppress genuine bugs. If backend returns 500, 403, or timeout, Sentinel triggers Human Review Safeguard.
+   - Confidence scoring is LLM-self-reported (not an algorithmic metric); offline mode blocks failures and routes them to human review; it does not heal. Healing requires the LLM keys. Safety is guaranteed by live test verification rollback.
    - Preserves conventional commit hygiene.
 ```

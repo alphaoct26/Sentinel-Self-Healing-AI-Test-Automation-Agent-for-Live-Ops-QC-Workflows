@@ -5,6 +5,11 @@ import time
 import requests
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
@@ -39,6 +44,10 @@ def test_refresh_leaderboard_and_rank_tier():
 
         rank_badge = page.locator("#rank-badge")
         expect(rank_badge).to_have_text("Top Rank: Elite")
+
+        # Verify #1 player on the leaderboard
+        player_row = page.locator("#player-row-1")
+        expect(player_row).to_contain_text("#1vaibhav (You)14,250Online")
 
         browser.close()
 
@@ -344,9 +353,11 @@ def run_benchmark():
     false_heals = sum(1 for r in real_bug_scenarios if r["outcome"] == "FALSE_HEAL")
 
     total_patches_attempted = sum(1 for r in results if r["sentinel_action"] == "Auto-Patched & Verified" or r["outcome"] in ["TRUE_HEAL", "FALSE_HEAL"])
-    heal_precision = (true_heals / total_patches_attempted * 100.0) if total_patches_attempted > 0 else 0.0
+    heal_precision = (true_heals / total_patches_attempted * 100.0) if total_patches_attempted > 0 else None
     false_heal_rate = (false_heals / total_real_bugs * 100.0) if total_real_bugs > 0 else 0.0
     safeguard_rate = (safeguards_held / total_real_bugs * 100.0) if total_real_bugs > 0 else 0.0
+
+    heal_precision_str = f"{heal_precision:.1f}%" if heal_precision is not None else "N/A"
 
     print("\n" + "=" * 80)
     print("BENCHMARK SUMMARY METRICS")
@@ -360,7 +371,7 @@ def run_benchmark():
     print(f"  - False Heals (Bad Patches):        {false_heals}")
     print(f"Pass-through / Robust (DOM/Timing):   {len(dom_reorg_scenarios)}")
     print(f"--------------------------------------------------------------------------------")
-    print(f"Heal Precision:                      {heal_precision:.1f}%")
+    print(f"Heal Precision:                      {heal_precision_str}")
     print(f"False-Heal Rate:                     {false_heal_rate:.1f}%")
     print(f"Safeguard Success Rate:              {safeguard_rate:.1f}%")
     print("=" * 80)
@@ -374,7 +385,7 @@ def run_benchmark():
             "real_bug_total": total_real_bugs,
             "safeguards_held": safeguards_held,
             "false_heals": false_heals,
-            "heal_precision_pct": round(heal_precision, 1),
+            "heal_precision_pct": round(heal_precision, 1) if heal_precision is not None else None,
             "false_heal_rate_pct": round(false_heal_rate, 1),
             "safeguard_success_rate_pct": round(safeguard_rate, 1)
         },

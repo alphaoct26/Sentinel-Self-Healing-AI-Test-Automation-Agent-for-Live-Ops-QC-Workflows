@@ -1,15 +1,15 @@
 # Confidence Scoring Methodology & Technical Transparency
 
-This document details the exact mechanism by which diagnostic confidence scores are generated, evaluated, and enforced within Sentinel's self-healing engine ([`src/selfHealer.py`](file:///d:/Projects/sentinel-qc/src/selfHealer.py)).
+This document details the exact mechanism by which diagnostic confidence scores are generated, evaluated, and enforced within Sentinel's self-healing engine ([`src/selfHealer.py`](../src/selfHealer.py)).
 
 ---
 
 ## 🔍 Plain Statement on Current Methodology
 
 > [!WARNING]
-> **Current Classification**: The confidence score in Sentinel's primary AI diagnostic pipeline is **purely LLM-self-reported**, with an offline fallback to **static rule-based constants**. 
+> **Current Classification**: The confidence score in Sentinel's primary AI diagnostic pipeline is **purely LLM-self-reported**, with an offline fallback to **static rule-based constants**. Confidence is LLM self-reported, not an algorithmic metric. Offline mode blocks failures and routes them to human review; it does not heal. Healing requires the LLM keys.
 >
-> It does **NOT** currently compute a mathematical DOM tree-edit distance, Levenshtein string distance, or embedding similarity vector in the Python code.
+> It does **NOT** currently compute a mathematical DOM tree-edit distance, Levenshtein string distance, or embedding similarity vector in the Python code (the RAG engine uses in-memory TF-IDF keyword retrieval over specs, tests and run artifacts).
 
 ---
 
@@ -19,7 +19,7 @@ The self-healing diagnostic pipeline runs in two distinct modes depending on env
 
 ### 1. Primary AI Diagnostic Path (API Enabled)
 
-When an AI provider API key is present (`NVIDIA_API_KEY` or `GEMINI_API_KEY`), [`src/selfHealer.py`](file:///d:/Projects/sentinel-qc/src/selfHealer.py) sends a structured prompt to the multimodal LLM:
+When an AI provider API key is present (`NVIDIA_API_KEY` or `GEMINI_API_KEY`), [`src/selfHealer.py`](../src/selfHealer.py) sends a structured prompt to the multimodal LLM:
 
 ```python
 # src/selfHealer.py (lines 120-137)
@@ -52,25 +52,25 @@ confidence = float(diagnosis.get("confidence", 0.0))
 
 ### 2. Offline Fallback Heuristic Path (No API / Failure Fallback)
 
-If the AI API call times out, encounters rate limits, or is unconfigured, [`src/selfHealer.py`](file:///d:/Projects/sentinel-qc/src/selfHealer.py#L205-L270) falls back to pattern-matching heuristics with **hardcoded static constants**:
+If the AI API call times out, encounters rate limits, or is unconfigured, [`src/selfHealer.py`](../src/selfHealer.py) falls back to pattern-matching heuristics with **hardcoded static constants**. Offline mode blocks failures and routes them to human review; it does not heal. Healing requires the LLM keys.
 
-| Matched Pattern in Error Summary / DOM | Assigned Classification | Hardcoded Confidence |
-| :--- | :--- | :--- |
-| HTTP Status `500`, `403`, `timeout`, `SyntaxError`, or `Error exporting report` | `GENUINE_BUG` | `0.95` (95%) |
-| Missing locator in error + Renamed ID candidate detected in DOM | `SELECTOR_DRIFT` | `0.92` (92%) |
-| Text assertion mismatch in error + Alternate copy candidate in DOM | `ASSERTION_DRIFT` | `0.90` (90%) |
-| Ambiguous / Unrecognized error pattern | `GENUINE_BUG` | `0.70` (70%) |
+| Matched Pattern in Error Summary / DOM | Assigned Classification | Hardcoded Confidence | Offline Reachability |
+| :--- | :--- | :--- | :--- |
+| HTTP Status `500`, `403`, `timeout`, `SyntaxError`, or `Error exporting report` | `GENUINE_BUG` | `0.95` (95%) | Active (matches Playwright timeout error text first) |
+| Missing locator in error + Renamed ID candidate detected in DOM | `SELECTOR_DRIFT` | `0.92` (92%) | not reachable offline in the current implementation (the timeout keyword rule matches first). |
+| Text assertion mismatch in error + Alternate copy candidate in DOM | `ASSERTION_DRIFT` | `0.90` (90%) | not reachable offline in the current implementation (the timeout keyword rule matches first). |
+| Ambiguous / Unrecognized error pattern | `GENUINE_BUG` | `0.70` (70%) | Active |
 
 ---
 
 ## 🚦 Safeguard Threshold Enforcement
 
-Sentinel defines a strict threshold in [`src/config.py`](file:///d:/Projects/sentinel-qc/src/config.py):
+Sentinel defines a strict threshold in [`src/config.py`](../src/config.py):
 ```python
 CONFIDENCE_THRESHOLD = 0.80  # 80% minimum confidence
 ```
 
-In [`src/selfHealer.py`](file:///d:/Projects/sentinel-qc/src/selfHealer.py#L281), auto-patching is strictly conditional:
+In [`src/selfHealer.py`](../src/selfHealer.py), auto-patching is strictly conditional:
 ```python
 if classification in ["SELECTOR_DRIFT", "ASSERTION_DRIFT"] and confidence >= CONFIDENCE_THRESHOLD:
     # Generate candidate code patch and re-verify
@@ -94,9 +94,9 @@ If the classification is `GENUINE_BUG` **or** if `confidence < 0.80`, Sentinel r
 
 ## 🛡️ Sentinel's Real Operational Safeguard: The Verification Loop
 
-Given that LLM-self-reported confidence is not an absolute mathematical guarantee, **why did Sentinel achieve 100% Heal Precision and 0.0% False-Heal Rate in empirical testing?**
+Given that LLM-self-reported confidence is not an absolute mathematical guarantee, **why did Sentinel achieve 100.0% Heal Precision (10/10 permanent repairs verified) and 0.0% False-Heal Rate (0/8 real bugs patched) in empirical testing (measured with LLM keys configured)?**
 
-Because Sentinel **never trusts the confidence score alone**. The real safety net is the **Post-Patch Verification Loop**:
+Because Sentinel **does not rely on the confidence score alone**. The operational safety net is the **Post-Patch Verification Loop**:
 
 ```
 ┌─────────────────────────────────┐
@@ -127,7 +127,7 @@ Because Sentinel **never trusts the confidence score alone**. The real safety ne
 
 1. Even if an LLM hallucinates an invalid locator with 95% confidence, Sentinel applies the patch to a staging buffer and **re-executes the test against the live target app**.
 2. If the re-run fails, Sentinel **immediately rolls back the patch** to the clean baseline.
-3. The patch is **never committed** unless the suite actually turns green upon execution.
+3. The patch is **only committed** if the suite actually turns green upon live execution.
 
 ---
 

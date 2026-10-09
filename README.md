@@ -90,7 +90,7 @@ It solves **one of the biggest pains in QA**: tests that break every week becaus
   └────────────────────┘
 
   🛡️  DOUBLE SAFETY NET: Confidence Gate + Live Verification
-      = Sentinel can NEVER silently break your tests
+      = Dual verification safeguards against silent test breaks
 ```
 
 ---
@@ -116,53 +116,55 @@ When a test fails, Sentinel:
 ### 3. 🚨 Human Review Safeguard (Anti-Fake-Fix)
 On genuine backend regressions (HTTP 500, HTTP 403, timeouts, malformed data), Sentinel **strictly refuses to modify the test**. It logs an incident report with visual evidence for human review.
 
-> **This means Sentinel can never silently mask a real bug.** The double-check (confidence threshold + live verification) makes false healing impossible.
+> **This safeguard prevents Sentinel from silently masking real bugs.** The double-check (confidence threshold + live verification) ensures candidate patches are verified against the running application before acceptance.
 
 ---
 
 ## 📊 Benchmark: 23 Mutation Scenarios
 
-Tested across every major failure class — Selector Drift, Assertion Drift, DOM Restructuring, Backend Regressions, and Compound failures.
+Tested across every major failure class — Selector Drift, Assertion Drift, DOM Restructuring, Backend Regressions, and Compound failures. Raw run outputs: [`benchmark_results_llm.json`](./artifacts/benchmark_results_llm.json) (online run with LLM keys) and [`benchmark_results_offline.json`](./artifacts/benchmark_results_offline.json) (offline heuristic baseline).
 
-### Results at a Glance
+### Results at a Glance (measured with LLM keys configured)
 
 | Metric | Result |
 |:---|:---:|
-| 🎯 Heal Precision (cosmetic patches that worked) | **100%** (5/5) |
-| 🚫 False-Heal Rate (real bugs accidentally patched) | **0%** (0/8) |
-| 🛡️ Safeguard Enforcement Rate | **100%** |
-| 🔄 Rollback Safety (bad patches caught by live verify) | **100%** |
+| 🎯 Heal Precision (committed patches) | **100.0%** (10/10 committed patches were correct; 10 of 14 candidate patches were correct, 4 were discarded by live verification) |
+| 🩹 Cosmetic Drift Healing Rate | **90.9%** (10/11 healed; 1 compound rolled back) |
+| 🚫 False-Heal Rate | **0.0%** (0/8 bad patches committed; 4 real bugs blocked by the classifier, 3 rolled back by live verification, 1 (BUG_SERVER_TIMEOUT) not detected by the test because the client tolerates the delay) |
+| 🔄 Live Verification Rollback | 4/4 unverified candidate patches safely discarded |
+
+*(Note: In offline mode without LLM keys: 23 scenarios, 0 true heals (0/11), 0 false heals (0/8), 6 of 8 real bugs held directly (75.0%), precision N/A with 0 patches attempted. Offline mode blocks failures and routes them to human review; it does not heal. Healing requires the LLM keys.)*
 
 <details>
-<summary>📋 Click to expand — All 23 Scenarios</summary>
+<summary>📋 Click to expand — All 23 Scenarios (measured with LLM keys configured)</summary>
 
 <br/>
 
 | # | Scenario | Category | Ground Truth | AI Classification | Confidence | Action | Result |
 |:-:|:---|:---|:---|:---|:-:|:---|:---:|
-| 01 | `NORMAL` | Baseline | Baseline | None | — | Clean run | ✅ PASSED |
-| 02 | `SELECTOR_RENAME_BTN` | Selector Drift | Cosmetic | `SELECTOR_DRIFT` | 90% | Rollback | 🛡️ SAFE |
-| 03 | `SELECTOR_PREFIX_CHANGE` | Selector Drift | Cosmetic | `SELECTOR_DRIFT` | 90% | Rollback | 🛡️ SAFE |
-| 04 | `SELECTOR_RENAME_CONTAINER` | Selector Drift | Cosmetic | `SELECTOR_DRIFT` | 90% | Rollback | 🛡️ SAFE |
-| 05 | `SELECTOR_RENAME_BADGE` | Selector Drift | Cosmetic | `SELECTOR_DRIFT` | 90% | Rollback | 🛡️ SAFE |
-| 06 | `SELECTOR_RENAME_EXPORT` | Selector Drift | Cosmetic | `SELECTOR_DRIFT` | 90% | Rollback | 🛡️ SAFE |
-| 07 | `MOVED_ELEMENT_NESTED` | DOM Structure | DOM Reorg | None (robust) | — | None | ✅ PASSED |
-| 08 | `MOVED_BUTTON_CONTAINER` | DOM Structure | DOM Reorg | None (robust) | — | None | ✅ PASSED |
-| 09 | `SLOW_INITIAL_RENDER` | Timing | Latency | None | — | None | ✅ PASSED |
-| 10 | `COPY_RANK_TIER_LABEL` | Assertion Drift | Cosmetic | `ASSERTION_DRIFT` | 80% | **Auto-Patched** | ✅ HEALED |
-| 11 | `COPY_CASE_CHANGE` | Assertion Drift | Cosmetic | `ASSERTION_DRIFT` | 90% | **Auto-Patched** | ✅ HEALED |
-| 12 | `COPY_PUNCTUATION_CHANGE` | Assertion Drift | Cosmetic | `ASSERTION_DRIFT` | 80% | **Auto-Patched** | ✅ HEALED |
-| 13 | `COPY_EXPANDED_PHRASE` | Assertion Drift | Cosmetic | `ASSERTION_DRIFT` | 90% | **Auto-Patched** | ✅ HEALED |
-| 14 | `COPY_LOCALIZED_SYNONYM` | Assertion Drift | Cosmetic | `ASSERTION_DRIFT` | 90% | **Auto-Patched** | ✅ HEALED |
-| 15 | `BUG_HTTP_500` | Backend Bug | Real Bug | `GENUINE_BUG` | 90% | 🚨 Human Review | 🛡️ HELD |
-| 16 | `BUG_HTTP_403_FORBIDDEN` | Backend Bug | Real Bug | `GENUINE_BUG` | 90% | 🚨 Human Review | 🛡️ HELD |
-| 17 | `BUG_MALFORMED_JSON` | Backend Bug | Real Bug | `GENUINE_BUG` | 80% | 🚨 Human Review | 🛡️ HELD |
-| 18 | `BUG_SERVER_TIMEOUT` | Backend Bug | Real Bug | None (async) | — | Baseline | ✅ PASSED |
-| 19 | `BUG_MISSING_PAYLOAD_FIELD` | Backend Bug | Real Bug | `ASSERTION_DRIFT` | 80% | Rollback | 🛡️ SAFE |
-| 20 | `INTERMITTENT_EXPORT_FAILURE` | Backend Bug | Real Bug | `GENUINE_BUG` | 80% | 🚨 Human Review | 🛡️ HELD |
-| 21 | `COMPOUND_SELECTOR_AND_500` | Compound | Real Bug | `SELECTOR_DRIFT` | 90% | Rollback | 🛡️ SAFE |
-| 22 | `COMPOUND_COPY_AND_403` | Compound | Real Bug | `GENUINE_BUG` | 80% | 🚨 Human Review | 🛡️ HELD |
-| 23 | `COMPOUND_SELECTOR_AND_COPY` | Compound | Cosmetic | `SELECTOR_DRIFT` | 90% | Rollback | 🛡️ SAFE |
+| 01 | `NORMAL` | Baseline | Clean | None | — | Baseline / Locator Robust | ✅ PASSED |
+| 02 | `SELECTOR_RENAME_BTN` | Selector Drift | Cosmetic | `SELECTOR_DRIFT` | 80.0% | Auto-Patched & Verified | ✅ HEALED |
+| 03 | `SELECTOR_PREFIX_CHANGE` | Selector Drift | Cosmetic | `SELECTOR_DRIFT` | 80.0% | Auto-Patched & Verified | ✅ HEALED |
+| 04 | `SELECTOR_RENAME_CONTAINER` | Selector Drift | Cosmetic | `SELECTOR_DRIFT` | 90.0% | Auto-Patched & Verified | ✅ HEALED |
+| 05 | `SELECTOR_RENAME_BADGE` | Selector Drift | Cosmetic | `SELECTOR_DRIFT` | 90.0% | Auto-Patched & Verified | ✅ HEALED |
+| 06 | `SELECTOR_RENAME_EXPORT` | Selector Drift | Cosmetic | `SELECTOR_DRIFT` | 90.0% | Auto-Patched & Verified | ✅ HEALED |
+| 07 | `MOVED_ELEMENT_NESTED` | DOM Structure | DOM Reorg | None | — | Baseline / Locator Robust | ✅ PASSED |
+| 08 | `MOVED_BUTTON_CONTAINER` | DOM Structure | DOM Reorg | None | — | Baseline / Locator Robust | ✅ PASSED |
+| 09 | `SLOW_INITIAL_RENDER` | Timing | Latency | None | — | Baseline / Locator Robust | ✅ PASSED |
+| 10 | `COPY_RANK_TIER_LABEL` | Assertion Drift | Cosmetic | `ASSERTION_DRIFT` | 90.0% | Auto-Patched & Verified | ✅ HEALED |
+| 11 | `COPY_CASE_CHANGE` | Assertion Drift | Cosmetic | `ASSERTION_DRIFT` | 90.0% | Auto-Patched & Verified | ✅ HEALED |
+| 12 | `COPY_PUNCTUATION_CHANGE` | Assertion Drift | Cosmetic | `ASSERTION_DRIFT` | 90.0% | Auto-Patched & Verified | ✅ HEALED |
+| 13 | `COPY_EXPANDED_PHRASE` | Assertion Drift | Cosmetic | `ASSERTION_DRIFT` | 90.0% | Auto-Patched & Verified | ✅ HEALED |
+| 14 | `COPY_LOCALIZED_SYNONYM` | Assertion Drift | Cosmetic | `SELECTOR_DRIFT` | 90.0% | Auto-Patched & Verified | ✅ HEALED |
+| 15 | `BUG_HTTP_500` | Backend Bug | Real Bug | `GENUINE_BUG` | 90.0% | 🚨 Human Review Safeguard | 🛡️ HELD |
+| 16 | `BUG_HTTP_403_FORBIDDEN` | Backend Bug | Real Bug | `GENUINE_BUG` | 90.0% | 🚨 Human Review Safeguard | 🛡️ HELD |
+| 17 | `BUG_MALFORMED_JSON` | Backend Bug | Real Bug | `GENUINE_BUG` | 80.0% | 🚨 Human Review Safeguard | 🛡️ HELD |
+| 18 | `BUG_SERVER_TIMEOUT` | Backend Bug | Real Bug | None | — | Baseline / Locator Robust | ✅ PASSED |
+| 19 | `BUG_MISSING_PAYLOAD_FIELD` | Backend Bug | Real Bug | `ASSERTION_DRIFT` | 80.0% | Verification Failed (Rolled Back) | 🛡️ SAFE (Rollback) |
+| 20 | `INTERMITTENT_EXPORT_FAILURE` | Backend Bug | Real Bug | `GENUINE_BUG` | 80.0% | 🚨 Human Review Safeguard | 🛡️ HELD |
+| 21 | `COMPOUND_SELECTOR_AND_500` | Compound Drift | Real Bug | `SELECTOR_DRIFT` | 80.0% | Verification Failed (Rolled Back) | 🛡️ SAFE (Rollback) |
+| 22 | `COMPOUND_COPY_AND_403` | Compound Drift | Real Bug | `ASSERTION_DRIFT` | 80.0% | Verification Failed (Rolled Back) | 🛡️ SAFE (Rollback) |
+| 23 | `COMPOUND_SELECTOR_AND_COPY` | Compound Drift | Cosmetic | `SELECTOR_DRIFT` | 80.0% | Verification Failed (Rolled Back) | 🛡️ SAFE (Rollback) |
 
 </details>
 
@@ -326,12 +328,12 @@ COMPOUND_COPY_AND_403    COMPOUND_SELECTOR_AND_COPY
 | AI Client | OpenAI SDK | 2.32.0 | Interface to LLM providers |
 | Primary AI | NVIDIA NIM | LLaMA-3.2-11b-Vision | Multimodal diagnosis, confidence scoring |
 | Fallback AI | Google Gemini | 2.5 Flash | Auto-fallback when primary is unavailable |
-| Local Heuristics | Python stdlib | `re`, `difflib`, `ast` | Offline regex/keyword classifier |
-| Knowledge Engine | Custom RAG | In-memory TF-IDF | Q&A over specs, code, and run logs |
+| Local Heuristics | Python stdlib | `re`, `difflib`, `ast` | Offline regex/keyword classifier (Offline mode blocks failures and routes them to human review; it does not heal. Healing requires the LLM keys.) |
+| Knowledge Engine | Custom RAG | In-memory TF-IDF | TF-IDF keyword retrieval over specs, tests and run artifacts |
 | Target App | Python http.server | — | Live drift-simulation app |
 | Environment | python-dotenv | 1.2.2 | API key loading from `.env` |
 | HTTP | Requests | 2.33.1 | CLI ↔ target app drift API calls |
-| CI/CD | GitHub Actions | Ubuntu Latest | Auto-test on every push + PR |
+| CI/CD | GitHub Actions & Jenkins | Ubuntu / Docker | GitHub Actions workflow runs on push/PR; the Jenkinsfile is written and reviewed but not yet run on a live Jenkins server. |
 
 ---
 
@@ -376,8 +378,69 @@ pytest tests/ -v
 python scripts/benchmark_runner.py
 ```
 
-CI/CD runs automatically on every push and pull request via `.github/workflows/test.yml`.
+GitHub Actions workflow runs on push/PR; the Jenkinsfile is written and reviewed but not yet run on a live Jenkins server.
 
+---
+
+## 🚀 CI/CD Pipelines
+
+Sentinel includes CI/CD automation: GitHub Actions workflow runs on push/PR; the Jenkinsfile is written and reviewed but not yet run on a live Jenkins server:
+
+### 1. GitHub Actions (`.github/workflows/test.yml`)
+- **Trigger**: Every `push` and `pull_request` targeting `main`.
+- **Environment**: Hosted `ubuntu-latest` with Python 3.11 and Playwright Chromium.
+- **Workflow**:
+  1. Checks out repository (`actions/checkout@v4`).
+  2. Sets up Python 3.11 with `pip` cache (`actions/setup-python@v5`).
+  3. Installs dependencies from `requirements.txt` and Chromium via `playwright install --with-deps chromium`.
+  4. Launches `target-app/server.py` in the background on port `3001` with a 30-iteration `curl` readiness health check.
+  5. Executes Sentinel test suite via CLI runner (`python src/cli.py run`).
+  6. Executes Pytest suite (`pytest -v`).
+  7. Uploads test run artifacts (`artifacts/runs/`) on every run (`actions/upload-artifact@v4`).
+
+### 2. Jenkins Declarative Pipeline (`Jenkinsfile`)
+- **Agent**: Docker container using the official Playwright Python image pinned to `mcr.microsoft.com/playwright/python:v1.63.0-noble` with `--ipc=host`.
+- **Pipeline Options**: Configured with `timeout(30m)`, `timestamps()`, `disableConcurrentBuilds()`, and `buildDiscarder(logRotator(numToKeepStr: '20'))`.
+- **Stages**:
+  1. **Checkout**: Retrieves source code from SCM.
+  2. **Setup**: Injects optional AI credentials, provisions Python virtual environment (`.venv`), installs `requirements.txt`, and ensures Chromium binaries and dependencies are present.
+  3. **Start Target App**: Spawns `target-app/server.py` on port `3001` in the background and polls `http://localhost:3001` until healthy (fails if not ready within 30s timeout).
+  4. **Test**: Executes Sentinel CLI runner (`python src/cli.py run`) and Pytest with JUnit XML output (`pytest -v --junitxml=artifacts/junit-report.xml`).
+  5. **Benchmark**: Runs the 23-scenario mutation benchmark (`python scripts/benchmark_runner.py`) and evaluates the quality gate against `artifacts/benchmark_results.json`. When AI provider credentials are configured, the pipeline strictly enforces `summary.heal_precision_pct >= 100%` and `summary.false_heal_rate_pct == 0%` (measured with LLM keys configured). When running in offline fallback mode without API keys, it logs the benchmark summary and safeguard enforcement metrics without failing the build. Offline mode blocks failures and routes them to human review; it does not heal. Healing requires the LLM keys.
+  6. **Archive and Report**: Publishes JUnit test reports (`artifacts/junit-report.xml`) and archives all build artifacts (`artifacts/**`, including `benchmark_results.json`, screenshots, and `AUDIT_LOG.md`).
+  7. **Post-Build Cleanup**: Automatically terminates the background target app server (via stored PID) and cleans up lingering processes.
+- *Verification Status*: Jenkinsfile written and reviewed; not yet run on a live Jenkins server.
+
+### 3. CI/CD Credentials (All Optional)
+Neither pipeline requires secret API keys to succeed. If no credentials are configured, Sentinel automatically falls back to its deterministic offline local-heuristics engine (Offline mode blocks failures and routes them to human review; it does not heal. Healing requires the LLM keys.):
+- `NIM_API_KEY` (or `NVIDIA_API_KEY`): Optional credential ID in Jenkins for NVIDIA NIM LLaMA-3.2 multimodal diagnosis.
+- `GEMINI_API_KEY`: Optional credential ID in Jenkins for Google Gemini 2.5 Flash fallback diagnosis.
+
+*Quality Gate Behavior*: When AI credentials are provided, the benchmark quality gate strictly requires 100% heal precision and 0% false heals (measured with LLM keys configured). When running offline with no keys configured, the benchmark logs all metrics and passes without failing the build as long as safeguards protect the suite from false heals. Offline mode blocks failures and routes them to human review; it does not heal. Healing requires the LLM keys.
+
+### 4. Running the Pipeline Locally with Docker
+You can reproduce the exact pipeline environment locally using Docker without needing a Jenkins server:
+
+```bash
+docker run --rm -it --ipc=host -v "${PWD}:/workspace" -w /workspace mcr.microsoft.com/playwright/python:v1.63.0-noble bash -c "
+  python3 -m venv .venv && \
+  . .venv/bin/activate && \
+  pip install --upgrade pip && \
+  pip install -r requirements.txt && \
+  playwright install --with-deps chromium && \
+  python target-app/server.py > target_app.log 2>&1 & \
+  for i in \$(seq 1 30); do curl -s -f http://localhost:3001 > /dev/null 2>&1 && break || sleep 1; done && \
+  python src/cli.py run && \
+  pytest -v --junitxml=artifacts/junit-report.xml && \
+  python scripts/benchmark_runner.py
+"
+```
+
+### 5. Running Jenkins Locally with Docker Agent
+To run this pipeline on a local Jenkins instance with Docker agents:
+- The **Docker Pipeline plugin** (`docker-workflow`) is required in Jenkins.
+- The Jenkins controller container needs access to the host Docker engine, typically configured by mounting `/var/run/docker.sock` from the host and ensuring the `docker` CLI binary is available inside the Jenkins container.
+- *Verification Note*: Running Jenkins locally with this Docker-out-of-Docker setup has not been tested in this environment.
 ---
 
 ## 📁 Documentation

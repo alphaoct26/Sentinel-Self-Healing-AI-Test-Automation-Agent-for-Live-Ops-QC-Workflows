@@ -34,6 +34,8 @@ artifacts/*.json
 artifacts/*.gif
 artifacts/*.webp
 !artifacts/AUDIT_LOG.md
+!artifacts/benchmark_results_llm.json
+!artifacts/benchmark_results_offline.json
 
 # Node
 node_modules/
@@ -43,4 +45,7 @@ npm-debug.log*
 YOUTUBE_FULL_PROJECT_SCRIPT.md
 DEMO_RECORDING_SCRIPT.md
 *video_script*
+
+# NotebookLM export folder (build outputs only, never commit)
+_notebooklm_export/
 
